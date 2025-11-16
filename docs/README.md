@@ -22,6 +22,20 @@ Summary of major features implemented and development milestones.
 ### [TESTING.md](./TESTING.md)
 Testing strategies, guidelines, and documentation for the platform.
 
+## Technical Documentation
+
+### [technical/STATE_IMPLEMENTATION_PLAN.md](./technical/STATE_IMPLEMENTATION_PLAN.md)
+Comprehensive implementation plan for priority state data collection agents (NY, CA, TX, FL, IL) with detailed technical requirements, cost estimates, and 10-week rollout timeline.
+
+### [technical/DATA_PIPELINE.md](./technical/DATA_PIPELINE.md)
+Data ingestion and enrichment pipeline architecture and implementation details.
+
+### [technical/DEPLOYMENT.md](./technical/DEPLOYMENT.md)
+Deployment strategies, environment setup, and production configuration.
+
+### [technical/INGESTION_IMPLEMENTATION_SUMMARY.md](./technical/INGESTION_IMPLEMENTATION_SUMMARY.md)
+Summary of data ingestion implementation and architecture decisions.
+
 ## Archive
 
 The `archive/` subdirectory contains historical documentation that may be useful for reference but is no longer actively maintained:

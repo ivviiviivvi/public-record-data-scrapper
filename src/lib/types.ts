@@ -22,6 +22,7 @@ export interface GrowthSignal {
   sourceUrl?: string
   score: number
   confidence: number
+  mlConfidence?: number // ML model confidence in signal validity (0-100)
 }
 
 export interface HealthScore {
@@ -32,6 +33,20 @@ export interface HealthScore {
   avgSentiment: number
   violationCount: number
   lastUpdated: string
+}
+
+export interface MLScoring {
+  confidence: number // Overall ML confidence in prospect quality (0-100)
+  recoveryLikelihood: number // Predicted likelihood of default recovery (0-100)
+  modelVersion: string
+  lastUpdated: string
+  factors: {
+    healthTrend: number
+    signalQuality: number
+    industryRisk: number
+    timeToRecovery: number
+    financialStability: number
+  }
 }
 
 export interface Prospect {
@@ -51,6 +66,7 @@ export interface Prospect {
   estimatedRevenue?: number
   claimedBy?: string
   claimedDate?: string
+  mlScoring?: MLScoring // ML confidence and recovery prediction
 }
 
 export interface CompetitorData {
@@ -89,4 +105,47 @@ export interface DashboardStats {
   newSignalsToday: number
   portfolioAtRisk: number
   avgHealthGrade: string
+}
+
+export interface ProspectNote {
+  id: string
+  prospectId: string
+  content: string
+  createdBy: string
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface FollowUpReminder {
+  id: string
+  prospectId: string
+  dueDate: string
+  priority: 'low' | 'medium' | 'high'
+  description: string
+  completed: boolean
+  createdBy: string
+  createdAt: string
+  completedAt?: string
+}
+
+export interface EmailTemplate {
+  id: string
+  name: string
+  subject: string
+  body: string
+  category: 'initial-outreach' | 'follow-up' | 'recovery-offer' | 'check-in'
+  variables: string[] // e.g., ['companyName', 'priorityScore', 'industryType']
+}
+
+export interface OutreachEmail {
+  id: string
+  prospectId: string
+  templateId: string
+  subject: string
+  body: string
+  status: 'draft' | 'sent' | 'scheduled'
+  sentAt?: string
+  scheduledFor?: string
+  createdBy: string
+  createdAt: string
 }
