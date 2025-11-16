@@ -323,6 +323,19 @@ Comprehensive test suite with 370+ tests covering:
 - [Mega Consolidation Summary](docs/reports/MEGA_CONSOLIDATION_SUMMARY.md)
 - [Final Cleanup Report](docs/reports/FINAL_CLEANUP_REPORT.md)
 
+### Core Documentation
+- **Product Requirements**: See [PRD.md](./PRD.md) for detailed feature specifications
+- **Logic Analysis**: See [LOGIC_ANALYSIS.md](./LOGIC_ANALYSIS.md) for implementation details
+- **Security**: See [SECURITY.md](./SECURITY.md) for security policies
+- **Competitive Analysis**: See [COMPETITIVE_ANALYSIS.md](./COMPETITIVE_ANALYSIS.md) for market research and improvement roadmap
+- **Agentic Forces**: See [AGENTIC_FORCES.md](./AGENTIC_FORCES.md) for AI agent orchestration system documentation
+- **Implementation Summary**: See [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) for implementation details
+
+### Repository Management
+- **Branch Resolution**: See [BRANCH_RESOLUTION.md](./BRANCH_RESOLUTION.md) for branch cleanup strategy
+- **Maintenance Guide**: See [MAINTENANCE_GUIDE.md](./MAINTENANCE_GUIDE.md) for post-merge maintenance actions
+- **PR Comments Resolution**: See [PR_COMMENTS_RESOLUTION.md](./PR_COMMENTS_RESOLUTION.md) for tracking open-ended comments and action items
+
 ## 🔒 Security
 
 - **Zero Vulnerabilities** - All dependencies audited and updated

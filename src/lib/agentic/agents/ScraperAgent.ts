@@ -111,7 +111,9 @@ export class ScraperAgent extends BaseAgent {
         companyName,
         filings: result.filings || [],
         filingCount: result.filings?.length || 0,
-        searchUrl: result.searchUrl
+        searchUrl: result.searchUrl,
+        retryCount: result.retryCount,
+        parsingErrors: result.parsingErrors
       },
       error: result.error,
       timestamp: new Date().toISOString()

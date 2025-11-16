@@ -54,7 +54,8 @@ export function AgenticDashboard({ agentic, competitors }: AgenticDashboardProps
   }
 
   const pendingImprovements = improvements.filter(i => i.status === 'detected' || i.status === 'approved')
-  const completedImprovements = improvements.filter(i => i.status === 'completed')
+  // Track completed improvements for metrics
+  // const completedImprovements = improvements.filter(i => i.status === 'completed')
 
   return (
     <Card className="p-6">
@@ -198,15 +199,6 @@ export function AgenticDashboard({ agentic, competitors }: AgenticDashboardProps
               ))
             )}
           </TabsContent>
-<<<<<<< HEAD
-=======
-          <TabsContent value="competitor">
-            <CompetitorAnalysis
-              competitors={competitors}
-              improvements={improvements}
-            />
-          </TabsContent>
->>>>>>> origin/codex/implement-cascade-forward-functionality-2025-11-1219-53-59
         </Tabs>
       </div>
     </Card>

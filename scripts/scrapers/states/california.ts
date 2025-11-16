@@ -5,7 +5,7 @@
  * Uses Puppeteer for real web scraping with anti-detection measures
  */
 
-import { BaseScraper, ScraperResult, UCCFiling } from '../base-scraper'
+import { BaseScraper, ScraperResult } from '../base-scraper'
 import puppeteer, { Browser, Page } from 'puppeteer'
 
 export class CaliforniaScraper extends BaseScraper {
@@ -56,6 +56,7 @@ export class CaliforniaScraper extends BaseScraper {
    */
   async search(companyName: string): Promise<ScraperResult> {
     if (!this.validateSearch(companyName)) {
+      this.log('error', 'Invalid company name provided', { companyName })
       return {
         success: false,
         error: 'Invalid company name',
@@ -63,33 +64,73 @@ export class CaliforniaScraper extends BaseScraper {
       }
     }
 
+    this.log('info', 'Starting UCC search', { companyName })
+
+    // Rate limiting - wait 12 seconds between requests (5 per minute)
+    await this.sleep(12000)
+
+    const searchUrl = this.getManualSearchUrl(companyName)
+
+    try {
+      const { result, retryCount } = await this.retryWithBackoff(async () => {
+        return await this.performSearch(companyName, searchUrl)
+      }, `CA UCC search for ${companyName}`)
+
+      this.log('info', 'UCC search completed successfully', { 
+        companyName, 
+        filingCount: result.filings?.length || 0,
+        retryCount
+      })
+
+      return {
+        ...result,
+        retryCount
+      }
+    } catch (error) {
+      this.log('error', 'UCC search failed after all retries', {
+        companyName,
+        error: error instanceof Error ? error.message : String(error)
+      })
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        searchUrl,
+        timestamp: new Date().toISOString()
+      }
+    }
+  }
+
+  /**
+   * Perform the actual search operation
+   */
+  private async performSearch(companyName: string, searchUrl: string): Promise<ScraperResult> {
     let page: Page | null = null
 
     try {
-      // Rate limiting - wait 12 seconds between requests (5 per minute)
-      await this.sleep(12000)
-
       const browser = await this.getBrowser()
       page = await browser.newPage()
+
+      this.log('info', 'Browser page created', { companyName })
 
       // Set realistic user agent and viewport
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36')
       await page.setViewport({ width: 1920, height: 1080 })
 
       // Navigate to search page
-      const searchUrl = this.getManualSearchUrl(companyName)
+      this.log('info', 'Navigating to search URL', { companyName, searchUrl })
       await page.goto(searchUrl, { 
         waitUntil: 'networkidle0', 
         timeout: this.config.timeout 
       })
 
-      // Wait for results to load (adjust selector based on actual site structure)
+      // Wait for results to load
       try {
         await page.waitForSelector('.search-results, .no-results, .captcha', { 
           timeout: 10000 
         })
       } catch {
-        // Continue - page may have loaded without specific selectors
+        this.log('warn', 'Results selector not found, proceeding anyway', { companyName })
       }
 
       // Check for CAPTCHA
@@ -100,6 +141,7 @@ export class CaliforniaScraper extends BaseScraper {
       })
 
       if (hasCaptcha) {
+        this.log('error', 'CAPTCHA detected', { companyName })
         return {
           success: false,
           error: 'CAPTCHA detected - manual intervention required',
@@ -108,8 +150,8 @@ export class CaliforniaScraper extends BaseScraper {
         }
       }
 
-      // Scrape UCC filing data (this is a template - adjust selectors for actual site)
-      const filings = await page.evaluate(() => {
+      // Scrape UCC filing data
+      const { filings: rawFilings, errors: parseErrors } = await page.evaluate(() => {
         const results: Array<{
           filingNumber: string
           debtorName: string
@@ -119,11 +161,12 @@ export class CaliforniaScraper extends BaseScraper {
           status: 'active' | 'terminated' | 'lapsed'
           filingType: 'UCC-1' | 'UCC-3'
         }> = []
+        const errors: string[] = []
         
         // Example selector pattern - adjust based on actual California SOS site structure
         const resultElements = document.querySelectorAll('.ucc-filing, tr.filing-row, .result-item')
         
-        resultElements.forEach((element) => {
+        resultElements.forEach((element, index) => {
           try {
             // Extract filing data - adjust these selectors for the actual site
             const filingNumber = element.querySelector('.filing-number, .filing-id')?.textContent?.trim() || ''
@@ -147,32 +190,46 @@ export class CaliforniaScraper extends BaseScraper {
               })
             }
           } catch (err) {
-            console.error('Error parsing filing element:', err)
+            errors.push(`Error parsing element ${index}: ${err instanceof Error ? err.message : String(err)}`)
           }
         })
         
-        return results
+        return { filings: results, errors }
+      })
+
+      // Validate filings and collect errors
+      const { validatedFilings, validationErrors } = this.validateFilings(rawFilings, parseErrors)
+
+      if (validationErrors.length > 0) {
+        this.log('warn', 'Some filings had parsing or validation errors', {
+          companyName,
+          errorCount: validationErrors.length,
+          errors: validationErrors
+        })
+      }
+
+      this.log('info', 'Filings scraped and validated', {
+        companyName,
+        rawCount: rawFilings.length,
+        validCount: validatedFilings.length,
+        errorCount: validationErrors.length
       })
 
       return {
         success: true,
-        filings: filings as UCCFiling[],
+        filings: validatedFilings,
         searchUrl,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        parsingErrors: validationErrors.length > 0 ? validationErrors : undefined
       }
 
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        searchUrl: this.getManualSearchUrl(companyName),
-        timestamp: new Date().toISOString()
-      }
     } finally {
       // Cleanup page in all cases
       if (page) {
-        await page.close().catch(() => {
-          // Ignore errors during cleanup
+        await page.close().catch((err) => {
+          this.log('warn', 'Error closing page', { 
+            error: err instanceof Error ? err.message : String(err) 
+          })
         })
       }
     }

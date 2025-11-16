@@ -113,7 +113,6 @@ export class UsageTracker {
    */
   private getUserRecords(userId: string, period: 'daily' | 'monthly'): UsageRecord[] {
     const allRecords = this.usageData.get(userId) || []
-    const now = new Date()
     const cutoffDate = new Date()
 
     if (period === 'daily') {

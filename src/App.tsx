@@ -52,7 +52,7 @@ function generateId(): string {
 }
 
 function App() {
-  const [prospects, setProspects, deleteProspects] = useKV<Prospect[]>('ucc-prospects', [])
+  const [prospects, setProspects] = useKV<Prospect[]>('ucc-prospects', [])
   const [competitors, setCompetitors] = useKV<CompetitorData[]>('competitor-data', [])
   const [portfolio, setPortfolio] = useKV<PortfolioCompany[]>('portfolio-companies', [])
   
@@ -71,7 +71,8 @@ function App() {
   const [userActions, setUserActions] = useKV<UserAction[]>('user-actions', [])
   const [notes, setNotes] = useKV<ProspectNote[]>('prospect-notes', [])
   const [reminders, setReminders] = useKV<FollowUpReminder[]>('prospect-reminders', [])
-  const [outreachEmails, setOutreachEmails] = useKV<OutreachEmail[]>('outreach-emails', [])
+  // Future: Email outreach tracking
+  // const [outreachEmails, setOutreachEmails] = useKV<OutreachEmail[]>('outreach-emails', [])
 
   // Agentic Engine Integration
   const systemContext: SystemContext = useMemo(() => ({

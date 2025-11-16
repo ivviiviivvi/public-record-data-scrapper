@@ -66,6 +66,20 @@ program
       console.log(chalk.white(`State: ${result.data.state}`))
       console.log(chalk.white(`Filings found: ${result.data.filingCount}`))
       
+      if (result.data?.retryCount && result.data.retryCount > 0) {
+        console.log(chalk.yellow(`Retries: ${result.data.retryCount}`))
+      }
+      
+      if (result.data?.parsingErrors && result.data.parsingErrors.length > 0) {
+        console.log(chalk.yellow(`\n⚠ Parsing warnings (${result.data.parsingErrors.length}):`))
+        result.data.parsingErrors.slice(0, 5).forEach((err: string) => {
+          console.log(chalk.gray(`  • ${err}`))
+        })
+        if (result.data.parsingErrors.length > 5) {
+          console.log(chalk.gray(`  ... and ${result.data.parsingErrors.length - 5} more`))
+        }
+      }
+      
       if (result.data?.filingCount > 0) {
         console.log(chalk.cyan('\n--- Filings ---'))
         result.data.filings.forEach((filing: UCCFiling, idx: number) => {

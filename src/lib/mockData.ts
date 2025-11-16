@@ -305,7 +305,7 @@ export function generateCompetitorData(): CompetitorData[] {
     'Enterprise Lending Network'
   ]
 
-  return lenders.map((lenderName, i) => {
+  return lenders.map((lenderName) => {
     const filingCount = randomInt(50, 500)
     const avgDealSize = randomInt(75000, 350000)
     const marketShare = Math.round((filingCount / 2000) * 100 * 10) / 10
