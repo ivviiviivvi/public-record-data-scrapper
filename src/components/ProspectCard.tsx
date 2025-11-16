@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { HealthGradeBadge } from './HealthGradeBadge'
-import { Buildings, TrendUp, MapPin } from '@phosphor-icons/react'
+import { Buildings, TrendUp, MapPin, Calendar, ChartLineUp } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
@@ -22,6 +22,26 @@ const industryIcons: Record<string, string> = {
   technology: '💻'
 }
 
+// Animation variants for staggered children
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: [0.4, 0.0, 0.2, 1] // Material Design easing
+    }
+  },
+  hover: {
+    y: -6,
+    transition: {
+      duration: 0.2,
+      ease: [0.4, 0.0, 0.2, 1]
+    }
+  }
+}
+
 export function ProspectCard({ prospect, onSelect }: ProspectCardProps) {
   const isClaimed = prospect.status === 'claimed'
   const hasGrowthSignals = prospect.growthSignals.length > 0
@@ -29,111 +49,144 @@ export function ProspectCard({ prospect, onSelect }: ProspectCardProps) {
 
   return (
     <motion.div
-      whileHover={{ scale: 1.02, y: -4 }}
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      whileHover="hover"
       whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
+      role="article"
+      aria-label={`${prospect.companyName} prospect card`}
     >
       <Card 
         className={cn(
-          'glass-effect p-4 sm:p-5 md:p-6 hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden relative',
-          isClaimed && 'border-primary/50'
+          'glass-effect p-5 sm:p-6 hover:shadow-2xl transition-all duration-300 cursor-pointer group overflow-hidden relative border-2',
+          isClaimed ? 'border-primary/40 bg-primary/5' : 'border-white/20 hover:border-primary/30'
         )}
         onClick={() => onSelect(prospect)}
+        tabIndex={0}
+        role="button"
+        aria-pressed={isClaimed}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onSelect(prospect)
+          }
+        }}
       >
+        {/* Enhanced gradient overlay with depth */}
         <motion.div 
-          className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-accent/8 opacity-0 group-hover:opacity-100 transition-opacity duration-400"
+          aria-hidden="true"
         />
         
+        {/* Status indicator bar */}
+        {isClaimed && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-accent to-primary" aria-hidden="true" />
+        )}
+        
         <div className="relative z-10">
-          <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
-            <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+          {/* Header Section - Enhanced spacing and layout */}
+          <div className="flex items-start justify-between mb-4 sm:mb-5 gap-3">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
               <motion.div 
-                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/10 text-xl sm:text-2xl flex-shrink-0"
-                animate={{
-                  rotate: [0, 5, 0, -5, 0],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
+                className="flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary/15 to-accent/10 text-2xl sm:text-3xl flex-shrink-0 shadow-sm"
+                whileHover={{ rotate: 5, scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+                aria-hidden="true"
               >
                 {industryIcons[prospect.industry]}
               </motion.div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base sm:text-lg leading-tight mb-1 truncate">
+                <h3 className="font-semibold text-base sm:text-lg leading-tight mb-1.5 truncate text-foreground">
                   {prospect.companyName}
                 </h3>
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                  <MapPin size={12} weight="fill" className="sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground/90">
+                  <MapPin size={14} weight="fill" className="flex-shrink-0" aria-hidden="true" />
                   <span className="truncate">{prospect.state}</span>
-                  <span>•</span>
+                  <span aria-hidden="true">•</span>
                   <span className="capitalize truncate">{prospect.industry}</span>
                 </div>
               </div>
             </div>
+            {/* Priority Score Badge - Enhanced design */}
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
               <motion.div 
-                className="font-mono text-xl sm:text-2xl font-semibold text-primary"
-                animate={{
-                  scale: [1, 1.05, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
+                className="relative"
+                whileHover={{ scale: 1.08 }}
+                transition={{ duration: 0.2 }}
               >
-                {prospect.priorityScore}
+                <div className="font-mono text-2xl sm:text-3xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
+                  {prospect.priorityScore}
+                </div>
+                <div 
+                  className="absolute -inset-1 bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg blur-sm -z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-hidden="true"
+                />
               </motion.div>
-              <div className="text-xs text-muted-foreground">Priority</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide">Priority</div>
             </div>
           </div>
 
-          <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs sm:text-sm text-muted-foreground">Health Score</span>
+          {/* Metrics Grid - Improved visual hierarchy */}
+          <div className="grid grid-cols-1 gap-2.5 sm:gap-3 mb-4 sm:mb-5">
+            <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-card/30 hover:bg-card/50 transition-colors">
+              <div className="flex items-center gap-2">
+                <ChartLineUp size={14} weight="bold" className="text-muted-foreground" aria-hidden="true" />
+                <span className="text-xs sm:text-sm text-muted-foreground font-medium">Health Score</span>
+              </div>
               <HealthGradeBadge grade={prospect.healthScore.grade} />
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs sm:text-sm text-muted-foreground">Default Age</span>
-              <Badge variant="outline" className="font-mono text-xs">
+            <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-card/30 hover:bg-card/50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Calendar size={14} weight="bold" className="text-muted-foreground" aria-hidden="true" />
+                <span className="text-xs sm:text-sm text-muted-foreground font-medium">Default Age</span>
+              </div>
+              <Badge variant="outline" className="font-mono text-xs font-semibold">
                 {yearsSinceDefault}y ago
               </Badge>
             </div>
 
             {hasGrowthSignals && (
               <motion.div 
-                className="flex items-center justify-between gap-2"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
+                className="flex items-center justify-between gap-2 p-2 rounded-lg bg-accent/10 border border-accent/20"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
               >
-                <span className="text-xs sm:text-sm text-muted-foreground">Growth Signals</span>
-                <Badge className="bg-accent text-accent-foreground text-xs">
-                  <TrendUp size={12} weight="bold" className="mr-1 sm:w-3.5 sm:h-3.5" />
+                <div className="flex items-center gap-2">
+                  <TrendUp size={14} weight="bold" className="text-accent-foreground" aria-hidden="true" />
+                  <span className="text-xs sm:text-sm text-accent-foreground font-medium">Growth Signals</span>
+                </div>
+                <Badge className="bg-accent text-accent-foreground text-xs font-semibold shadow-sm">
                   {prospect.growthSignals.length} detected
                 </Badge>
               </motion.div>
             )}
           </div>
 
-          <p className="text-xs sm:text-sm text-foreground/80 mb-3 sm:mb-4 line-clamp-2">
+          {/* Narrative - Enhanced typography */}
+          <p className="text-xs sm:text-sm text-foreground/85 mb-4 sm:mb-5 line-clamp-2 leading-relaxed">
             {prospect.narrative}
           </p>
 
+          {/* Action Button - Enhanced accessibility and design */}
           <div className="flex items-center gap-2">
             <Button 
               size="sm" 
-              className="flex-1 text-xs sm:text-sm h-8 sm:h-9"
+              className={cn(
+                "flex-1 text-xs sm:text-sm h-9 sm:h-10 font-semibold shadow-sm transition-all duration-200",
+                "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                isClaimed && "opacity-60"
+              )}
               disabled={isClaimed}
+              aria-label={isClaimed ? `${prospect.companyName} - Already claimed` : `View details for ${prospect.companyName}`}
             >
-              <Buildings size={14} weight="fill" className="mr-1 sm:mr-2 sm:w-4 sm:h-4" />
+              <Buildings size={16} weight="fill" className="mr-2" aria-hidden="true" />
               {isClaimed ? 'Claimed' : 'View Details'}
             </Button>
             {isClaimed && prospect.claimedBy && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-xs font-medium px-2.5 py-1">
                 {prospect.claimedBy}
               </Badge>
             )}
