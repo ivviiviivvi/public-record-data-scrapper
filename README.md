@@ -2,139 +2,210 @@
 
 A comprehensive merchant cash advance intelligence platform that transforms UCC filing data into actionable business opportunities through automated scraping, real-time health monitoring, growth signal detection, and ML-powered lead qualification.
 
-## 📚 Documentation
+## Features
 
-- **[PRD.md](./PRD.md)** - Product Requirements Document
-- **[LOGIC_ANALYSIS.md](./LOGIC_ANALYSIS.md)** - Logic Check & Evolution Analysis
-- **[MCP_RESEARCH.md](./MCP_RESEARCH.md)** - Research on MCP Servers, Open Source Projects, and Databases
-- **[IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)** - Step-by-step Implementation Guide
-- **[RESEARCH_SUMMARY.md](./RESEARCH_SUMMARY.md)** - Executive Research Summary
-- **[FREE_STACK_GUIDE.md](./FREE_STACK_GUIDE.md)** - 100% Free & Open Source Technology Stack Guide ⭐
-- **[SECURITY.md](./SECURITY.md)** - Security Policy
+### Core Capabilities
+- **Prospect Dashboard**: Displays prioritized list of UCC default prospects with scores, growth signals, and health grades
+- **Data Ingestion & Enrichment Pipeline**: Automated data fetching, enrichment, and refresh from multiple sources
+- **Health Scoring**: Real-time business health monitoring with sentiment analysis and violation tracking
+- **Growth Signal Detection**: Automated detection of hiring, permits, contracts, expansion, and equipment signals
+- **Competitor Intelligence**: Market analysis of UCC filing activity by secured parties
+- **Portfolio Monitoring**: Track funded companies with health alerts and risk indicators
+- **Lead Re-qualification Engine**: Resurrect "dead" leads by detecting new growth/risk signals
+- **Agentic Forces**: Autonomous system improvement with AI agents for continuous optimization
 
-## 🚀 Technology Stack
+### Data Export
 
-### Frontend
-- **React 19** with TypeScript ✅ FREE (MIT License)
-- **Vite** for build tooling ✅ FREE (MIT License)
-- **Tailwind CSS** for styling ✅ FREE (MIT License)
-- **shadcn/ui** components ✅ FREE (MIT License)
-- **Radix UI** primitives ✅ FREE (MIT License)
-- **Framer Motion** for animations ✅ FREE (MIT License)
+The platform supports flexible data export in multiple formats:
 
-### Backend (Planned) - All FREE & Open Source
-- **Web Scraping**: Scrapy (Python, BSD License) or Crawlee (TypeScript, Apache 2.0) ✅ FREE
-- **Primary Database**: PostgreSQL 15+ (PostgreSQL License) with TimescaleDB (Apache 2.0) ✅ FREE
-- **Analytics Database**: ClickHouse (Apache 2.0) for real-time dashboards ✅ FREE
-- **Processing**: DuckDB (MIT License) for ETL and transformations ✅ FREE
-- **MCP Servers**: Model Context Protocol for AI integration ✅ FREE
+#### Export Formats
+- **JSON**: Structured data format ideal for API integration and programmatic processing
+- **CSV**: Spreadsheet-compatible format perfect for Excel, Google Sheets, and CRM imports
 
-**💰 Total Software Licensing Cost: $0** - See [FREE_STACK_GUIDE.md](./FREE_STACK_GUIDE.md) for complete details.
+#### Export Features
+- **Single Prospect Export**: Export individual prospect details from the detail dialog
+- **Bulk Export**: Select multiple prospects using checkboxes and export in batch
+- **Smart Filtering**: Export includes filter information in the filename when filters are active
+- **Comprehensive Data**: Exports include all prospect fields:
+  - Company information (name, industry, state, revenue)
+  - Scoring data (priority score, health grade, health score)
+  - Growth signals (count, types, descriptions)
+  - Default history (date, days since default)
+  - Health metrics (sentiment trend, violations, reviews)
+  - Status information (claimed by, claimed date)
+  - AI-generated narrative
 
-## 🏗️ Project Structure
+#### How to Export
+1. Select your preferred export format from the "Export Format" dropdown (JSON or CSV)
+2. For single prospects: Click "View Details" on a prospect card, then click "Export"
+3. For bulk export: Select prospects using checkboxes, then use the batch export option
+4. Files are automatically downloaded with timestamped filenames
 
-```
-.
-├── src/
-│   ├── components/     # React components
-│   ├── hooks/          # Custom React hooks
-│   ├── lib/            # Utility functions
-│   └── styles/         # CSS and styling
-├── MCP_RESEARCH.md     # MCP servers and database research
-├── IMPLEMENTATION_GUIDE.md  # Implementation instructions
-├── PRD.md              # Product requirements
-└── LOGIC_ANALYSIS.md   # Logic analysis report
-```
+### Advanced Filtering
+- Filter by industry, state, minimum score
+- Advanced filters for health grades, status, signal types, sentiment trends
+- Filter by signal count, default age, revenue range, and violation presence
+- Save and reuse filter combinations
 
-## 🛠️ Getting Started
+### User Interface
+- **Modern Design**: Glassmorphic UI with translucent effects inspired by Windows 11 Mica and macOS
+- **Mobile-First**: Fully responsive design optimized for all device sizes
+- **Real-time Updates**: Live data refresh with stale data warnings
+- **Batch Operations**: Select and act on multiple prospects simultaneously
 
-### Prerequisites
+## Technology Stack
 
-- Node.js 18+
-- npm or yarn
+- **Frontend**: React 19 with TypeScript
+- **Build Tool**: Vite
+- **UI Components**: Radix UI with custom styling
+- **State Management**: GitHub Spark KV store
+- **Styling**: Tailwind CSS with custom theme
+- **Icons**: Phosphor Icons
+- **Charts**: Recharts for data visualization
+
+## Getting Started
 
 ### Installation
 
 ```bash
-# Install dependencies
 npm install
+```
 
-# Start development server
+### Configuration
+
+1. Copy the environment template:
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` and configure your data sources:
+```bash
+# Use mock data for development (default)
+VITE_USE_MOCK_DATA=true
+
+# For production with real data, set to false and configure API keys
+VITE_USE_MOCK_DATA=false
+VITE_UCC_API_ENDPOINT=https://api.ucc-filings.com/v1
+VITE_UCC_API_KEY=your_api_key_here
+```
+
+See [DATA_PIPELINE.md](./DATA_PIPELINE.md) for detailed configuration options.
+
+### Development
+
+```bash
 npm run dev
+```
 
-# Build for production
+The application will be available at `http://localhost:5000` (or next available port).
+
+### Demo
+
+Run the data pipeline demo:
+```bash
+npx tsx demo-data-pipeline.ts
+```
+
+### Build
+
+```bash
 npm run build
+```
 
-# Preview production build
+### Preview Production Build
+
+```bash
 npm run preview
 ```
 
-## 🎯 Key Features
+## Project Structure
 
-1. **Prospect Dashboard** - Prioritized list of UCC default prospects with scores and growth signals
-2. **Market Intelligence** - Competitive analysis by secured party/lender
-3. **Lead Re-qualification Engine** - Resurrects dead leads with new growth/risk signals
-4. **Health Scoring** - Real-time business health monitoring
-5. **Growth Signal Detection** - Automated detection of expansion indicators
+```
+/src                 # Source code
+  /components        # React components
+    /ui             # Reusable UI components (Radix-based)
+  /lib              # Utilities and types
+    /agentic        # Autonomous improvement system
+    types.ts        # TypeScript type definitions
+    mockData.ts     # Mock data generators
+    utils.ts        # Utility functions
+    exportUtils.ts  # Export functionality (JSON/CSV)
+  /hooks            # Custom React hooks
+  /styles           # CSS and theme files
+  App.tsx           # Main application component
 
-## 🗄️ Database Architecture
+/docs               # Documentation
+  PRD.md           # Product Requirements Document
+  COMPETITIVE_ANALYSIS.md
+  LOGIC_ANALYSIS.md
+  IMPLEMENTATION_SUMMARY.md
+  TESTING.md
+  AGENTIC_FORCES.md
+  /archive          # Historical documentation
 
-The platform uses a hybrid database approach:
+/examples           # Example code and demos
+  demo-agentic.ts  # Agentic system demonstration
+```
 
-- **PostgreSQL**: Primary storage for UCC filings, entities, and relational data
-- **TimescaleDB**: Time-series optimization for health scores and signals
-- **ClickHouse**: High-performance analytics for dashboards and reporting
-- **DuckDB**: Embedded analytics for ETL and data processing
+## Competitive Analysis
 
-See [MCP_RESEARCH.md](./MCP_RESEARCH.md) for detailed database recommendations.
+See [COMPETITIVE_ANALYSIS.md](./docs/COMPETITIVE_ANALYSIS.md) for detailed research on similar applications and implemented improvements based on industry best practices.
 
-## 🤖 MCP Server Integration
+## Recent Improvements
 
-Model Context Protocol (MCP) servers provide standardized AI integration:
+Based on competitive analysis of similar B2B SaaS platforms (D&B, ZoomInfo, UCC search platforms, and MCA CRMs), we have implemented:
 
-- **PostgreSQL MCP Server**: AI-ready database access
-- **Puppeteer MCP Server**: Browser automation for web scraping
-- **Custom Scraping Tools**: State-specific UCC portal scrapers
+1. **Enhanced Export Capabilities** (✅ Completed)
+   - Added CSV export format alongside existing JSON export
+   - Proper CSV escaping for special characters (commas, quotes, newlines)
+   - Export format selector in UI for easy switching
+   - Timestamped filenames with filter context
+   - Comprehensive field coverage in exports
 
-See [IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md) for deployment instructions.
+See [COMPETITIVE_ANALYSIS.md](./docs/COMPETITIVE_ANALYSIS.md) for the full analysis and roadmap of planned improvements.
 
-## 🔒 Security
+## Data Pipeline
 
-Please review [SECURITY.md](./SECURITY.md) for security policies and vulnerability reporting.
+The platform includes a comprehensive automated data ingestion and enrichment pipeline:
 
-## 📊 Research & Analysis
+### Features
+- **Multi-Source Ingestion**: Fetch UCC filings from state portals, APIs, and databases
+- **Intelligent Enrichment**: Automatically detect growth signals, calculate health scores, and estimate revenue
+- **Scheduled Refresh**: Periodic updates with configurable intervals
+- **Error Handling**: Circuit breakers, retry logic, and comprehensive error handling
+- **Real-time Monitoring**: Event-based status updates and metrics
 
-Comprehensive research has been conducted on:
+### Quick Start
 
-1. **MCP Servers** - Web scraping and database integration
-2. **Open Source Projects** - Scrapy, Crawlee, Playwright
-3. **Database Solutions** - PostgreSQL, ClickHouse, TimescaleDB, DuckDB
-4. **Implementation Strategy** - Phased approach with recommended stack
+**Development Mode** (Mock Data):
+```bash
+# Uses generated mock data
+npm run dev
+```
 
-See [MCP_RESEARCH.md](./MCP_RESEARCH.md) for full research findings.
+**Production Mode** (Real Data):
+```bash
+# Configure .env with real API keys
+VITE_USE_MOCK_DATA=false
+VITE_ENABLE_REALTIME_INGESTION=true
 
-## 🚦 Development Status
+# Start the app
+npm run dev
+```
 
-- [x] Initial research and planning
-- [x] Technology stack selection
-- [x] Frontend UI implementation
-- [ ] Backend scraping infrastructure
-- [ ] Database schema implementation
-- [ ] MCP server deployment
-- [ ] ML pipeline for health scoring
-- [ ] Production deployment
+See [DATA_PIPELINE.md](./DATA_PIPELINE.md) for comprehensive documentation.
 
-## 🤝 Contributing
+## Documentation
 
-Contributions are welcome! Please follow these guidelines:
+- **Data Pipeline**: See [DATA_PIPELINE.md](./DATA_PIPELINE.md) for ingestion and enrichment details
+- **Agentic Forces**: See [AGENTIC_FORCES.md](./AGENTIC_FORCES.md) for autonomous improvement system
+- **Product Requirements**: See [PRD.md](./PRD.md) for detailed feature specifications
+- **Logic Analysis**: See [LOGIC_ANALYSIS.md](./LOGIC_ANALYSIS.md) for implementation details
+- **Testing**: See [TESTING.md](./TESTING.md) for testing guidelines
+- **Security**: See [SECURITY.md](./SECURITY.md) for security policies
+- **Competitive Analysis**: See [COMPETITIVE_ANALYSIS.md](./docs/COMPETITIVE_ANALYSIS.md) for market research and improvement roadmap
+- **Contributing**: See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines
 
-1. Review [PRD.md](./PRD.md) for product requirements
-2. Follow existing code style and patterns
-3. Write tests for new features
-4. Update documentation as needed
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+## License
 
 The Spark Template files and resources from GitHub are licensed under the terms of the MIT license, Copyright GitHub, Inc.
