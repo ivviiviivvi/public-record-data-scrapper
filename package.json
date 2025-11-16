@@ -12,7 +12,8 @@
         "preview": "vite preview",
         "test": "vitest",
         "test:ui": "vitest --ui",
-        "test:coverage": "vitest --coverage"
+        "test:coverage": "vitest --coverage",
+        "postinstall": "node ./scripts/ensure-main-branch.mjs"
     },
     "dependencies": {
         "@github/spark": "^0.39.0",
