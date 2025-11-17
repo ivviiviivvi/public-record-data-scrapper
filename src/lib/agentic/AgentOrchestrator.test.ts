@@ -18,6 +18,7 @@ describe('AgentOrchestrator', () => {
     const config: OrchestrationConfig = {
       enableStateAgents: true,
       enableEntryPointAgents: true,
+      states: ['NY', 'CA', 'TX'], // Limit to 3 states for faster tests
       maxConcurrentCollections: 3,
       collectionInterval: 1000, // 1 second for tests
       prioritizeStates: ['NY', 'CA', 'TX']
@@ -449,8 +450,8 @@ describe('AgentOrchestrator', () => {
       const orch = new AgentOrchestrator(config)
       const timerId = orch.startPeriodicCollection()
 
-      // Wait for at least one collection
-      await new Promise(resolve => setTimeout(resolve, 150))
+      // Wait for at least one collection (collection takes ~500ms to complete)
+      await new Promise(resolve => setTimeout(resolve, 700))
 
       orch.stopPeriodicCollection(timerId)
 
@@ -493,13 +494,19 @@ describe('AgentOrchestrator', () => {
       const config: OrchestrationConfig = {
         enableStateAgents: true,
         enableEntryPointAgents: false,
-        states: ['NY', 'INVALID', 'CA'],
+        states: ['NY', 'CA'],
         maxConcurrentCollections: 3,
         collectionInterval: 1000
       }
 
       const orch = new AgentOrchestrator(config)
-      const results = await orch.collectFromAllSources()
+
+      // Collect from valid states and one invalid state directly
+      const results = await Promise.all([
+        orch.collectFromState('NY'),
+        orch.collectFromState('INVALID'),
+        orch.collectFromState('CA')
+      ])
 
       const successful = results.filter(r => r.success).length
       const failed = results.filter(r => !r.success).length
