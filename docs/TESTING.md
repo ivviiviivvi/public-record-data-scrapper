@@ -108,7 +108,48 @@ Current test coverage for the agentic system:
   - Workflow efficiency
   - Usability suggestions
 
-**Total: 143 tests**
+**Total: 143 tests for agentic system**
+
+### Data Services (NEW)
+- **DataIngestionService** (40+ tests): UCC filing data ingestion
+  - Multi-source ingestion
+  - Rate limiting and circuit breakers
+  - Retry logic with exponential backoff
+  - Error handling and recovery
+  - Data validation and deduplication
+  - Performance optimization
+
+- **DataEnrichmentService** (35+ tests): Prospect enrichment
+  - Growth signal detection (hiring, permits, contracts)
+  - Health score calculation
+  - Revenue estimation
+  - Industry classification
+  - Batch enrichment
+  - Error handling
+
+- **DataRefreshScheduler** (35+ tests): Automated data refresh
+  - Scheduler lifecycle (start/stop/pause/resume)
+  - Scheduled operations (ingestion, enrichment, refresh)
+  - Event system
+  - Stale data detection
+  - Batch processing
+  - Error tracking
+
+### API Data Sources (NEW)
+- **Growth Signal APIs** (30+ tests): Job boards, news, contracts, permits
+- **Health Score APIs** (30+ tests): Reviews, ratings, sentiment analysis
+- **UCC Data APIs** (30+ tests): State portals and commercial providers
+
+### Integration Tests (NEW)
+- **Data Pipeline** (20+ tests): End-to-end workflow testing
+  - Complete ingestion → enrichment → scheduling flow
+  - Cross-service data flow
+  - Error recovery across pipeline
+  - Performance with large data volumes
+  - State management
+  - Data quality validation
+
+**Total Test Count: 363+ tests**
 
 ## Writing Tests
 
