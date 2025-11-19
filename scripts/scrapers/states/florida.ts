@@ -7,6 +7,7 @@
 
 import { BaseScraper, ScraperResult } from '../base-scraper'
 import puppeteer, { Browser, Page } from 'puppeteer'
+import { PaginationHandler } from '../pagination-handler'
 
 export class FloridaScraper extends BaseScraper {
   private browser: Browser | null = null
@@ -236,8 +237,18 @@ export class FloridaScraper extends BaseScraper {
         }
       }
 
-      // Extract UCC filing data with multiple selector strategies
-      const { filings: rawFilings, errors: parseErrors } = await page.evaluate(() => {
+      // Initialize pagination handler
+      const paginationHandler = new PaginationHandler({ maxPages: 10 })
+      const allFilings: Array<any> = []
+      const allErrors: string[] = []
+      let currentPage = 1
+
+      // Pagination loop
+      while (true) {
+        this.log('info', `Scraping page ${currentPage}`, { companyName })
+
+        // Extract UCC filing data with multiple selector strategies
+        const { filings: rawFilings, errors: parseErrors } = await page.evaluate(() => {
         const results: Array<{
           filingNumber: string
           debtorName: string
@@ -322,10 +333,43 @@ export class FloridaScraper extends BaseScraper {
         })
 
         return { filings: results, errors }
-      })
+        })
 
-      // Validate filings and collect errors
-      const { validatedFilings, validationErrors } = this.validateFilings(rawFilings, parseErrors)
+        // Add filings and errors from this page
+        allFilings.push(...rawFilings)
+        allErrors.push(...parseErrors)
+
+        this.log('info', `Page ${currentPage}: Found ${rawFilings.length} raw filings`, { companyName })
+
+        // Check for pagination
+        const pagination = await paginationHandler.detectPagination(page)
+
+        this.log('info', `Pagination detected: ${pagination.paginationType}`, {
+          companyName,
+          currentPage: pagination.currentPage,
+          totalPages: pagination.totalPages,
+          hasNextPage: pagination.hasNextPage
+        })
+
+        // Check if we should continue to next page
+        if (!paginationHandler.shouldContinue(currentPage, pagination)) {
+          this.log('info', `Pagination complete at page ${currentPage}`, { companyName })
+          break
+        }
+
+        // Navigate to next page
+        const navigated = await paginationHandler.goToNextPage(page, pagination)
+
+        if (!navigated) {
+          this.log('info', 'Could not navigate to next page, stopping pagination', { companyName })
+          break
+        }
+
+        currentPage++
+      }
+
+      // Validate all filings and collect errors
+      const { validatedFilings, validationErrors } = this.validateFilings(allFilings, allErrors)
 
       if (validationErrors.length > 0) {
         this.log('warn', 'Some filings had parsing or validation errors', {
@@ -335,9 +379,10 @@ export class FloridaScraper extends BaseScraper {
         })
       }
 
-      this.log('info', 'Filings scraped and validated', {
+      this.log('info', 'All filings scraped and validated', {
         companyName,
-        rawCount: rawFilings.length,
+        totalPages: currentPage,
+        rawCount: allFilings.length,
         validCount: validatedFilings.length,
         errorCount: validationErrors.length
       })
