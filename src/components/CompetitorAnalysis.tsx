@@ -1,359 +1,310 @@
-import { ReactNode, useMemo } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { Badge } from './ui/badge'
-import { Skeleton } from './ui/skeleton'
-import { CompetitorChart } from './CompetitorChart'
-import { CompetitorData } from '@/lib/types'
+/**
+ * Competitor Analysis Component
+ *
+ * Visualizes competitor market dynamics and cascades agentic recommendations
+ * forward into actionable insights for the user.
+ */
+import { useMemo } from 'react'
 import {
-  ArrowDownRight,
-  ArrowUpRight,
-  ChartPieSlice,
-  TrendDown,
-  TrendUp,
-  UsersThree
-} from '@phosphor-icons/react'
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from './ui/card'
+import { Badge } from './ui/badge'
+import { Progress } from './ui/progress'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from './ui/table'
+import { ScrollArea } from './ui/scroll-area'
+import { TrendUp, ArrowUp, ArrowDown, Users, Target } from '@phosphor-icons/react'
+import { CompetitorData } from '@/lib/types'
+import { Improvement, ImprovementPriority } from '@/lib/agentic/types'
 
 interface CompetitorAnalysisProps {
-  data: CompetitorData[]
-  isLoading?: boolean
-  lastUpdated?: string
+  competitors: CompetitorData[]
+  improvements: Improvement[]
 }
 
-interface CompetitorSnapshot {
-  totalFilings: number
-  avgDealSize: number
-  shareLeader: CompetitorData | null
-  shareChallenger: CompetitorData | null
-  topMover: CompetitorData | null
-  topDecliner: CompetitorData | null
-  topGainers: CompetitorData[]
-  topLosers: CompetitorData[]
-  concentratedShare: number
-  stateHotspots: Array<{ state: string; filings: number }>
+const priorityColors: Record<ImprovementPriority, string> = {
+  critical: 'bg-red-500',
+  high: 'bg-orange-500',
+  medium: 'bg-amber-500',
+  low: 'bg-blue-500'
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
+const statusColors: Record<Improvement['status'], string> = {
+  detected: 'bg-blue-500',
+  analyzing: 'bg-cyan-500',
+  approved: 'bg-amber-500',
+  implementing: 'bg-orange-500',
+  testing: 'bg-purple-500',
+  completed: 'bg-emerald-500',
+  rejected: 'bg-red-500'
+}
+
+function formatCurrency(value: number): string {
+  return Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0
   }).format(value)
 }
 
-function formatPercent(value: number) {
-  return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`
-}
+export default function CompetitorAnalysis({ competitors, improvements }: CompetitorAnalysisProps) {
+  const sortedCompetitors = useMemo(
+    () => [...competitors].sort((a, b) => b.filingCount - a.filingCount),
+    [competitors]
+  )
 
-function formatDateLabel(value?: string) {
-  if (!value) return null
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return null
-  return parsed.toLocaleString()
-}
+  const totalFilings = useMemo(
+    () => sortedCompetitors.reduce((sum, competitor) => sum + competitor.filingCount, 0),
+    [sortedCompetitors]
+  )
 
-export default function CompetitorAnalysis({ data, isLoading = false, lastUpdated }: CompetitorAnalysisProps) {
-  const snapshot = useMemo<CompetitorSnapshot>(() => {
-    if (!data || data.length === 0) {
-      return {
-        totalFilings: 0,
-        avgDealSize: 0,
-        shareLeader: null,
-        shareChallenger: null,
-        topMover: null,
-        topDecliner: null,
-        topGainers: [],
-        topLosers: [],
-        concentratedShare: 0,
-        stateHotspots: []
-      }
+  const growingCompetitors = useMemo(
+    () => sortedCompetitors.filter(competitor => competitor.monthlyTrend >= 0).length,
+    [sortedCompetitors]
+  )
+
+  const industryCoverage = useMemo(() => {
+    const counts = new Map<string, number>()
+    sortedCompetitors.forEach(competitor => {
+      competitor.industries.forEach(industry => {
+        counts.set(industry, (counts.get(industry) || 0) + 1)
+      })
+    })
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+  }, [sortedCompetitors])
+
+  const competitorInsights = useMemo(() => {
+    const priorityOrder: Record<ImprovementPriority, number> = {
+      critical: 4,
+      high: 3,
+      medium: 2,
+      low: 1
     }
 
-    const shareSorted = [...data].sort((a, b) => b.marketShare - a.marketShare)
-    const trendSorted = [...data].sort((a, b) => b.monthlyTrend - a.monthlyTrend)
+    return improvements
+      .filter(improvement =>
+        improvement.suggestion &&
+        ['strategic', 'competitor-intelligence'].includes(improvement.suggestion.category)
+      )
+      .sort(
+        (a, b) =>
+          priorityOrder[b.suggestion.priority] - priorityOrder[a.suggestion.priority]
+      )
+  }, [improvements])
 
-    const totalFilings = data.reduce((sum, competitor) => sum + competitor.filingCount, 0)
-    const avgDealSize = data.reduce((sum, competitor) => sum + competitor.avgDealSize, 0) / data.length
-
-    const shareLeader = shareSorted[0] ?? null
-    const shareChallenger = shareSorted[1] ?? null
-    const topMover = trendSorted[0] ?? null
-    const topDecliner = trendSorted[trendSorted.length - 1] ?? null
-
-    const topGainers = trendSorted.filter(item => item.monthlyTrend > 0).slice(0, 3)
-    const topLosers = [...trendSorted].reverse().filter(item => item.monthlyTrend < 0).slice(0, 3)
-
-    const concentratedShare = shareSorted.slice(0, 3).reduce((sum, item) => sum + item.marketShare, 0)
-
-    const stateHotspots = Object.entries(
-      data.reduce<Record<string, number>>((acc, competitor) => {
-        acc[competitor.topState] = (acc[competitor.topState] || 0) + competitor.filingCount
-        return acc
-      }, {})
+  if (sortedCompetitors.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Competitor Analysis</CardTitle>
+          <CardDescription>
+            Market intelligence will populate automatically once competitor data is available.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            The agentic engine has not ingested competitor filings yet. Run an analysis cycle to generate insights.
+          </p>
+        </CardContent>
+      </Card>
     )
-      .map(([state, filings]) => ({ state, filings }))
-      .sort((a, b) => b.filings - a.filings)
-      .slice(0, 3)
+  }
 
-    return {
-      totalFilings,
-      avgDealSize,
-      shareLeader,
-      shareChallenger,
-      topMover,
-      topDecliner,
-      topGainers,
-      topLosers,
-      concentratedShare,
-      stateHotspots
-    }
-  }, [data])
-
-  const lastUpdatedLabel = useMemo(() => formatDateLabel(lastUpdated), [lastUpdated])
-
-  const insights = useMemo(() => {
-    const messages: Array<{ icon: ReactNode; title: string; description: string }> = []
-
-    if (snapshot.topMover && snapshot.topMover.monthlyTrend > 0) {
-      messages.push({
-        icon: <TrendUp className="h-4 w-4 text-emerald-500" weight="bold" />,
-        title: 'Growth Alert',
-        description: `${snapshot.topMover.lenderName} is accelerating with ${formatPercent(snapshot.topMover.monthlyTrend)} MoM filings growth. Shore up defenses in ${snapshot.topMover.topState}.`
-      })
-    }
-
-    if (snapshot.shareLeader && snapshot.shareChallenger) {
-      const gap = snapshot.shareLeader.marketShare - snapshot.shareChallenger.marketShare
-      messages.push({
-        icon: <ChartPieSlice className="h-4 w-4 text-sky-500" weight="bold" />,
-        title: 'Market Share Gap',
-        description: `${snapshot.shareLeader.lenderName} leads by ${gap.toFixed(1)} pts over ${snapshot.shareChallenger.lenderName}. Target mid-market borrowers to close the gap.`
-      })
-    }
-
-    if (snapshot.topDecliner && snapshot.topDecliner.monthlyTrend < 0) {
-      messages.push({
-        icon: <TrendDown className="h-4 w-4 text-rose-500" weight="bold" />,
-        title: 'Churn Opportunity',
-        description: `${snapshot.topDecliner.lenderName} filings fell ${Math.abs(snapshot.topDecliner.monthlyTrend).toFixed(1)}%. Approach their clients for share capture.`
-      })
-    }
-
-    if (snapshot.stateHotspots[0]) {
-      const hotspot = snapshot.stateHotspots[0]
-      messages.push({
-        icon: <ArrowUpRight className="h-4 w-4 text-amber-500" weight="bold" />,
-        title: 'Regional Heat',
-        description: `${hotspot.state} is the busiest state with ${hotspot.filings.toLocaleString()} filings last cycle. Prioritize coverage there.`
-      })
-    }
-
-    return messages
-  }, [snapshot])
+  const topCompetitors = sortedCompetitors.slice(0, 5)
+  const leadingCompetitor = sortedCompetitors[0]
 
   return (
     <Card>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <CardTitle>Competitor Analysis</CardTitle>
-          <CardDescription>Live intelligence on lender activity, share concentration, and momentum shifts.</CardDescription>
-        </div>
-        {lastUpdatedLabel && (
-          <Badge variant="outline" className="font-mono text-xs">
-            Last updated {lastUpdatedLabel}
-          </Badge>
-        )}
+      <CardHeader>
+        <CardTitle>Competitor Analysis</CardTitle>
+        <CardDescription>
+          Up-to-date market share intelligence with cascaded recommendations from the agentic council.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {isLoading ? (
-          <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} className="h-24 rounded-xl" />
-              ))}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-xl border bg-gradient-to-br from-blue-50 to-cyan-50 p-4 dark:from-blue-950 dark:to-cyan-950">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>Total annual filings</span>
+              <TrendUp className="h-4 w-4 text-cyan-500" />
             </div>
-            <Skeleton className="h-80 rounded-2xl" />
-            <div className="grid gap-6 md:grid-cols-2">
-              <Skeleton className="h-48 rounded-2xl" />
-              <Skeleton className="h-48 rounded-2xl" />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} className="h-28 rounded-xl" />
-              ))}
-            </div>
+            <div className="mt-2 text-2xl font-semibold">{totalFilings.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Aggregated from {sortedCompetitors.length} secured party lenders
+            </p>
           </div>
-        ) : data.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-            <UsersThree className="h-12 w-12 text-muted-foreground" weight="duotone" />
-            <div>
-              <h3 className="text-lg font-semibold">No competitor data</h3>
-              <p className="text-sm text-muted-foreground">
-                Load filings or sync your market feed to unlock competitor intelligence.
+
+          <div className="rounded-xl border bg-gradient-to-br from-emerald-50 to-teal-50 p-4 dark:from-emerald-950 dark:to-teal-950">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>Market leader</span>
+              <Users className="h-4 w-4 text-emerald-500" />
+            </div>
+            <div className="mt-2 text-2xl font-semibold">{leadingCompetitor.lenderName}</div>
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
+              <Badge variant="outline" className="border-emerald-500/60 text-emerald-600 dark:text-emerald-300">
+                {leadingCompetitor.marketShare.toFixed(1)}% share
+              </Badge>
+              <span>Avg deal {formatCurrency(leadingCompetitor.avgDealSize)}</span>
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-gradient-to-br from-amber-50 to-orange-50 p-4 dark:from-amber-950 dark:to-orange-950">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>Growth outlook</span>
+              <Target className="h-4 w-4 text-orange-500" />
+            </div>
+            <div className="mt-2 text-2xl font-semibold">
+              {growingCompetitors}/{sortedCompetitors.length}
+            </div>
+            <p className="text-xs text-muted-foreground">Competitors with positive monthly trend</p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="rounded-xl border lg:col-span-2">
+            <div className="border-b p-4">
+              <h3 className="text-sm font-semibold">Top competitors by filing activity</h3>
+              <p className="text-xs text-muted-foreground">
+                Market share and trajectory for the leading secured parties
               </p>
             </div>
-          </div>
-        ) : (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border bg-gradient-to-br from-sky-500/10 to-cyan-500/10 p-4">
-                <p className="text-xs font-medium text-muted-foreground">Total Filings (Top Cohort)</p>
-                <p className="mt-2 text-2xl font-semibold">{snapshot.totalFilings.toLocaleString()}</p>
-                {snapshot.topMover && snapshot.topMover.monthlyTrend > 0 && (
-                  <p className="mt-1 text-xs text-emerald-500">
-                    <TrendUp className="mr-1 inline h-3 w-3" weight="bold" />
-                    {snapshot.topMover.lenderName} +{snapshot.topMover.monthlyTrend.toFixed(1)}%
-                  </p>
-                )}
-              </div>
-              <div className="rounded-2xl border bg-gradient-to-br from-emerald-500/10 to-lime-500/10 p-4">
-                <p className="text-xs font-medium text-muted-foreground">Average Deal Size</p>
-                <p className="mt-2 text-2xl font-semibold">{formatCurrency(snapshot.avgDealSize)}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Based on {data.length} active lenders
-                </p>
-              </div>
-              <div className="rounded-2xl border bg-gradient-to-br from-fuchsia-500/10 to-purple-500/10 p-4">
-                <p className="text-xs font-medium text-muted-foreground">Share Concentration</p>
-                <p className="mt-2 text-2xl font-semibold">{snapshot.concentratedShare.toFixed(1)}%</p>
-                <p className="mt-1 text-xs text-muted-foreground">Top 3 lenders combined share</p>
-              </div>
-              <div className="rounded-2xl border bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-4">
-                <p className="text-xs font-medium text-muted-foreground">Market Leader</p>
-                {snapshot.shareLeader ? (
-                  <>
-                    <p className="mt-2 text-lg font-semibold leading-tight">{snapshot.shareLeader.lenderName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {snapshot.shareLeader.marketShare.toFixed(1)}% share · {snapshot.shareLeader.filingCount.toLocaleString()} filings
-                    </p>
-                  </>
-                ) : (
-                  <p className="mt-2 text-lg font-semibold">—</p>
-                )}
-              </div>
-            </div>
-
-            <CompetitorChart data={data} />
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="rounded-2xl border p-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold">Top Movers</h3>
-                  <Badge variant="outline" className="text-xs">
-                    Momentum shifts
-                  </Badge>
-                </div>
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <h4 className="text-xs font-medium uppercase text-muted-foreground">Gainers</h4>
-                    {snapshot.topGainers.length > 0 ? (
-                      <ul className="mt-2 space-y-2">
-                        {snapshot.topGainers.map(competitor => (
-                          <li key={`${competitor.lenderName}-gainer`} className="flex items-center justify-between rounded-lg bg-emerald-500/5 px-3 py-2">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium">{competitor.lenderName}</p>
-                              <p className="text-xs text-muted-foreground">{competitor.topState} focus · {competitor.filingCount.toLocaleString()} filings</p>
-                            </div>
-                            <span className="ml-3 flex items-center text-sm font-semibold text-emerald-500">
-                              <ArrowUpRight className="mr-1 h-4 w-4" weight="bold" />
-                              {competitor.monthlyTrend.toFixed(1)}%
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-2 text-sm text-muted-foreground">No positive momentum this cycle.</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4 className="text-xs font-medium uppercase text-muted-foreground">Decliners</h4>
-                    {snapshot.topLosers.length > 0 ? (
-                      <ul className="mt-2 space-y-2">
-                        {snapshot.topLosers.map(competitor => (
-                          <li key={`${competitor.lenderName}-decliner`} className="flex items-center justify-between rounded-lg bg-rose-500/5 px-3 py-2">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium">{competitor.lenderName}</p>
-                              <p className="text-xs text-muted-foreground">{competitor.topState} focus · {competitor.filingCount.toLocaleString()} filings</p>
-                            </div>
-                            <span className="ml-3 flex items-center text-sm font-semibold text-rose-500">
-                              <ArrowDownRight className="mr-1 h-4 w-4" weight="bold" />
-                              {competitor.monthlyTrend.toFixed(1)}%
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-2 text-sm text-muted-foreground">No significant declines detected.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border p-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold">Market Share Watchlist</h3>
-                  <Badge variant="secondary" className="text-xs uppercase">
-                    Focus 5
-                  </Badge>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {[...data]
-                    .sort((a, b) => b.marketShare - a.marketShare)
-                    .slice(0, 5)
-                    .map((competitor, index) => (
-                      <div key={`${competitor.lenderName}-share`} className="flex items-center justify-between rounded-lg border px-3 py-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-[10px] font-mono">
-                              #{index + 1}
-                            </Badge>
-                            <p className="truncate text-sm font-medium">{competitor.lenderName}</p>
+            <ScrollArea className="max-h-[320px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Rank</TableHead>
+                    <TableHead>Competitor</TableHead>
+                    <TableHead className="text-right">Filings</TableHead>
+                    <TableHead className="text-right">Avg deal</TableHead>
+                    <TableHead className="text-right">Market share</TableHead>
+                    <TableHead className="text-right">Trend</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topCompetitors.map((competitor, index) => {
+                    const positiveTrend = competitor.monthlyTrend >= 0
+                    return (
+                      <TableRow key={competitor.lenderName}>
+                        <TableCell className="font-medium">#{index + 1}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{competitor.lenderName}</span>
+                            <span className="text-xs text-muted-foreground">Top state: {competitor.topState}</span>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {competitor.marketShare.toFixed(1)}% share · Avg deal {formatCurrency(competitor.avgDealSize)}
-                          </p>
-                        </div>
-                        <div className="text-right text-xs text-muted-foreground">
-                          <div className="font-semibold text-sm text-foreground">{competitor.filingCount.toLocaleString()}</div>
-                          <div className="flex items-center justify-end gap-1">
-                            {competitor.monthlyTrend >= 0 ? (
-                              <TrendUp className="h-3.5 w-3.5 text-emerald-500" weight="bold" />
+                        </TableCell>
+                        <TableCell className="text-right">{competitor.filingCount.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(competitor.avgDealSize)}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col items-end">
+                            <span className="text-sm font-medium">{competitor.marketShare.toFixed(1)}%</span>
+                            <Progress
+                              value={Math.min(100, competitor.marketShare)}
+                              className="mt-1 h-1.5 w-32"
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge
+                            variant="outline"
+                            className={positiveTrend
+                              ? 'border-green-500/60 text-green-600 dark:text-green-300'
+                              : 'border-red-500/60 text-red-600 dark:text-red-300'}
+                          >
+                            {positiveTrend ? (
+                              <ArrowUp className="mr-1 h-3.5 w-3.5" />
                             ) : (
-                              <TrendDown className="h-3.5 w-3.5 text-rose-500" weight="bold" />
+                              <ArrowDown className="mr-1 h-3.5 w-3.5" />
                             )}
-                            <span className={competitor.monthlyTrend >= 0 ? 'text-emerald-500 font-semibold' : 'text-rose-500 font-semibold'}>
-                              {competitor.monthlyTrend.toFixed(1)}%
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
+                            {Math.abs(competitor.monthlyTrend).toFixed(1)}%
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
 
-            {insights.length > 0 && (
-              <div>
-                <h3 className="text-base font-semibold">Actionable Intelligence</h3>
-                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  {insights.map((insight, index) => (
-                    <div key={index} className="rounded-2xl border bg-muted/40 p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="rounded-full bg-background p-2 shadow-sm">
-                          {insight.icon}
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold">{insight.title}</p>
-                          <p className="text-xs text-muted-foreground">{insight.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+          <div className="rounded-xl border p-4">
+            <h3 className="text-sm font-semibold">Industry coverage</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Dominant niches targeted by active competitors
+            </p>
+            <div className="space-y-3">
+              {industryCoverage.map(([industry, count]) => (
+                <div key={industry} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="capitalize">{industry}</span>
+                    <Badge variant="secondary">{count} competitors</Badge>
+                  </div>
+                  <Progress value={(count / sortedCompetitors.length) * 100} className="h-1.5" />
                 </div>
-              </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border">
+          <div className="flex items-center justify-between border-b p-4">
+            <div>
+              <h3 className="text-sm font-semibold">Agentic recommendations</h3>
+              <p className="text-xs text-muted-foreground">
+                Strategic actions cascaded forward from the council review
+              </p>
+            </div>
+            <Badge variant="outline" className="text-muted-foreground">
+              {competitorInsights.length} insights
+            </Badge>
+          </div>
+          <div className="space-y-4 p-4">
+            {competitorInsights.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No strategic recommendations have been generated yet. Run a council review to surface opportunities.
+              </p>
+            ) : (
+              competitorInsights.map(improvement => (
+                <div
+                  key={improvement.id}
+                  className="rounded-lg border bg-muted/40 p-4 transition hover:bg-muted/60"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={priorityColors[improvement.suggestion.priority]}>
+                      {improvement.suggestion.priority}
+                    </Badge>
+                    <Badge className={statusColors[improvement.status]}>
+                      {improvement.status}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      Safety {improvement.suggestion.safetyScore}/100
+                    </span>
+                  </div>
+                  <h4 className="mt-2 text-sm font-semibold">{improvement.suggestion.title}</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {improvement.suggestion.reasoning}
+                  </p>
+                  {improvement.result && (
+                    <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-300">
+                      {improvement.result.feedback}
+                    </p>
+                  )}
+                </div>
+              ))
             )}
-          </>
-        )}
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
