@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useSafeKV } from '@/hooks/use-safe-kv'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,9 +42,9 @@ import { useAgenticEngine } from '@/hooks/use-agentic-engine'
 import { SystemContext, PerformanceMetrics, UserAction } from '@/lib/agentic/types'
 
 function App() {
-  const [prospects, setProspects, deleteProspects] = useKV<Prospect[]>('ucc-prospects', [])
-  const [competitors, setCompetitors] = useKV<CompetitorData[]>('competitor-data', [])
-  const [portfolio, setPortfolio] = useKV<PortfolioCompany[]>('portfolio-companies', [])
+  const [prospects, setProspects, deleteProspects] = useSafeKV<Prospect[]>('ucc-prospects', [])
+  const [competitors, setCompetitors] = useSafeKV<CompetitorData[]>('competitor-data', [])
+  const [portfolio, setPortfolio] = useSafeKV<PortfolioCompany[]>('portfolio-companies', [])
   
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -54,11 +54,11 @@ function App() {
   const [minScore, setMinScore] = useState<number>(0)
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilterState>(initialFilters)
   const [selectedProspectIds, setSelectedProspectIds] = useState<Set<string>>(new Set())
-  const [lastDataRefresh, setLastDataRefresh] = useKV<string>('last-data-refresh', new Date().toISOString())
+  const [lastDataRefresh, setLastDataRefresh] = useSafeKV<string>('last-data-refresh', new Date().toISOString())
   const [sortField, setSortField] = useState<SortField>('priorityScore')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [exportFormat, setExportFormat] = useKV<ExportFormat>('export-format', 'json')
-  const [userActions, setUserActions] = useKV<UserAction[]>('user-actions', [])
+  const [exportFormat, setExportFormat] = useSafeKV<ExportFormat>('export-format', 'json')
+  const [userActions, setUserActions] = useSafeKV<UserAction[]>('user-actions', [])
 
   // Agentic Engine Integration
   const systemContext: SystemContext = useMemo(() => ({
