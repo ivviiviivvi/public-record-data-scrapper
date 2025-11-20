@@ -4,22 +4,24 @@
  * Displays autonomous system improvements, agent analyses, and execution status
  */
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Robot, 
-  Brain, 
-  CheckCircle, 
-  Clock, 
+import {
+  Robot,
+  Brain,
+  CheckCircle,
+  Clock,
   Warning,
   TrendUp,
   Shield,
   Sparkle,
-  Users
+  Users,
+  Lightbulb,
+  Target
 } from '@phosphor-icons/react'
 import { Improvement, ImprovementPriority, ImprovementCategory } from '@/lib/agentic/types'
 import { UseAgenticEngineResult } from '@/hooks/use-agentic-engine'
@@ -40,16 +42,19 @@ export function AgenticDashboard({ agentic }: AgenticDashboardProps) {
     low: 'bg-blue-500'
   }
 
-  const categoryIcons: Record<ImprovementCategory, React.ReactNode> = {
-    'performance': <TrendUp className="w-4 h-4" />,
-    'security': <Shield className="w-4 h-4" />,
-    'usability': <Sparkle className="w-4 h-4" />,
-    'data-quality': <Brain className="w-4 h-4" />,
-    'feature-enhancement': <CheckCircle className="w-4 h-4" />
+  const categoryDetails: Record<ImprovementCategory, { icon: ReactNode; label: string }> = {
+    'performance': { icon: <TrendUp className="w-5 h-5" />, label: 'Performance' },
+    'security': { icon: <Shield className="w-5 h-5" />, label: 'Security' },
+    'usability': { icon: <Sparkle className="w-5 h-5" />, label: 'Usability' },
+    'data-quality': { icon: <Brain className="w-5 h-5" />, label: 'Data Quality' },
+    'feature-enhancement': { icon: <CheckCircle className="w-5 h-5" />, label: 'Feature Enhancement' },
+    'competitor-analysis': { icon: <Users className="w-5 h-5" />, label: 'Competitor Analysis' },
+    'threat-analysis': { icon: <Warning className="w-5 h-5" />, label: 'Threat Analysis' },
+    'opportunity-analysis': { icon: <Lightbulb className="w-5 h-5" />, label: 'Opportunity Analysis' },
+    'strategic-recommendation': { icon: <Target className="w-5 h-5" />, label: 'Strategic Recommendation' }
   }
 
   const pendingImprovements = improvements.filter(i => i.status === 'detected' || i.status === 'approved')
-  const completedImprovements = improvements.filter(i => i.status === 'completed')
 
   return (
     <Card className="p-6">
@@ -169,7 +174,7 @@ export function AgenticDashboard({ agentic }: AgenticDashboardProps) {
                   improvement={improvement}
                   onApprove={approveImprovement}
                   priorityColors={priorityColors}
-                  categoryIcons={categoryIcons}
+                  categoryDetails={categoryDetails}
                 />
               ))
             )}
@@ -191,7 +196,7 @@ export function AgenticDashboard({ agentic }: AgenticDashboardProps) {
                   improvement={improvement}
                   onApprove={approveImprovement}
                   priorityColors={priorityColors}
-                  categoryIcons={categoryIcons}
+                  categoryDetails={categoryDetails}
                   showActions
                 />
               ))
@@ -210,16 +215,16 @@ interface ImprovementCardProps {
   improvement: Improvement
   onApprove: (id: string) => void
   priorityColors: Record<ImprovementPriority, string>
-  categoryIcons: Record<ImprovementCategory, React.ReactNode>
+  categoryDetails: Record<ImprovementCategory, { icon: ReactNode; label: string }>
   showActions?: boolean
 }
 
-function ImprovementCard({ 
-  improvement, 
-  onApprove, 
-  priorityColors, 
-  categoryIcons,
-  showActions = false 
+function ImprovementCard({
+  improvement,
+  onApprove,
+  priorityColors,
+  categoryDetails,
+  showActions = false
 }: ImprovementCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const { suggestion, status } = improvement
@@ -239,8 +244,11 @@ function ImprovementCard({
       <div className="space-y-3">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
-            <div className="mt-1">
-              {categoryIcons[suggestion.category]}
+            <div className="mt-1 flex flex-col items-center gap-1 text-center text-muted-foreground min-w-[120px]">
+              {categoryDetails[suggestion.category].icon}
+              <span className="text-xs font-medium">
+                {categoryDetails[suggestion.category].label}
+              </span>
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
