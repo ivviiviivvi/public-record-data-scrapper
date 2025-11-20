@@ -20,6 +20,7 @@ import { AdvancedFilters, AdvancedFilterState, initialFilters } from '@/componen
 import { StaleDataWarning } from '@/components/StaleDataWarning'
 import { BatchOperations } from '@/components/BatchOperations'
 import { SortControls, SortField, SortDirection } from '@/components/SortControls'
+import { LegacySearch } from '@/components/LegacySearch'
 import { 
   generateProspects, 
   generateCompetitorData, 
@@ -520,6 +521,7 @@ function App() {
                 </p>
                 <CompetitorChart data={competitors || []} />
               </div>
+              <LegacySearch />
             </TabsContent>
 
             <TabsContent value="requalification" className="space-y-4 sm:space-y-6">
