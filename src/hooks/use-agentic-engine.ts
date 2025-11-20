@@ -4,7 +4,7 @@
  * Provides React integration for the agentic system
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { AgenticEngine } from '@/lib/agentic/AgenticEngine'
 import { SystemContext, Improvement, ImprovementStatus, AgenticConfig } from '@/lib/agentic/types'
@@ -63,13 +63,18 @@ export function useAgenticEngine(context: SystemContext, config?: Partial<Agenti
   }, [engine])
 
   // Auto-run on mount if enabled (only once per session)
+  const hasAutoRunRef = useRef(false)
+
   useEffect(() => {
+    if (hasAutoRunRef.current) return
+
     const shouldAutoRun = !lastRunTime && engine.getConfig().enabled
     if (shouldAutoRun && context.prospects.length > 0) {
+      hasAutoRunRef.current = true
       console.log('🤖 Auto-running initial agentic cycle...')
       runCycle()
     }
-  }, []) // Empty deps - only run once on mount
+  }, [context.prospects.length, engine, lastRunTime, runCycle])
 
   return {
     engine,
