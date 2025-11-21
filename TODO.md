@@ -222,6 +222,12 @@
 **Effort**: 1-2 weeks
 **Assignee**: TBD
 
+- [x] **Custom Agents**
+  - [x] Dynatrace expert agent with complete DQL knowledge
+  - [x] Incident response and root cause analysis workflows
+  - [x] Deployment impact analysis capabilities
+  - [x] Security vulnerability response workflows
+
 - [ ] **Grafana Dashboards**
   - [ ] Create data pipeline dashboard
   - [ ] Create business metrics dashboard

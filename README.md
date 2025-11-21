@@ -393,6 +393,10 @@ See [TESTING.md](./TESTING.md) for detailed testing documentation.
 - **Maintenance Guide**: See [MAINTENANCE_GUIDE.md](./MAINTENANCE_GUIDE.md) for post-merge maintenance actions
 - **PR Comments Resolution**: See [PR_COMMENTS_RESOLUTION.md](./PR_COMMENTS_RESOLUTION.md) for tracking open-ended comments and action items
 
+### Custom Agents
+- **Dynatrace Expert**: See [.github/agents/dynatrace-expert.md](.github/agents/dynatrace-expert.md) - Master observability specialist with complete DQL knowledge
+- **Custom Agents Guide**: See [.github/agents/README.md](.github/agents/README.md) - How to use and create custom agents
+
 ## 🔒 Security
 
 - **Zero Vulnerabilities** - All dependencies audited and updated
