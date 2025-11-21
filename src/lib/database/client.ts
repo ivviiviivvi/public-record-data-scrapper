@@ -1,254 +1,314 @@
 /**
- * Database Client - PostgreSQL connection with pooling
+ * Database Client with Connection Pooling
  *
- * Provides connection pooling, query logging, retry logic, and timeout handling
+ * Provides a robust PostgreSQL client with:
+ * - Connection pooling (PgBouncer compatible)
+ * - Query timeout handling
+ * - Automatic retry logic
+ * - Query logging and metrics
+ * - Transaction support
  */
 
-import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg'
+import { Pool, PoolClient, PoolConfig, QueryResult, QueryResultRow } from 'pg'
+import { logger } from '../logging/logger'
 
-export interface DatabaseConfig {
-  connectionString?: string
-  host?: string
-  port?: number
-  database?: string
-  user?: string
-  password?: string
-  ssl?: boolean | { rejectUnauthorized: boolean }
-  poolSize?: number
+export interface DatabaseConfig extends PoolConfig {
+  host: string
+  port: number
+  database: string
+  user: string
+  password: string
+  // Connection pooling
+  max?: number  // Maximum pool size
+  min?: number  // Minimum pool size
   idleTimeoutMillis?: number
   connectionTimeoutMillis?: number
-  queryTimeoutMillis?: number
-  enableQueryLogging?: boolean
+  // Query settings
+  statement_timeout?: number  // Query timeout in ms
+  query_timeout?: number
+  // SSL settings
+  ssl?: boolean | {
+    rejectUnauthorized?: boolean
+    ca?: string
+    key?: string
+    cert?: string
+  }
 }
 
 export interface QueryOptions {
   timeout?: number
   retries?: number
   logQuery?: boolean
+  name?: string  // For prepared statements
 }
 
-class DatabaseClient {
-  private pool: Pool | null = null
-  private config: DatabaseConfig
-  private isConnected: boolean = false
-  private queryCount: number = 0
-  private errorCount: number = 0
+export interface QueryMetrics {
+  query: string
+  duration: number
+  rows: number
+  timestamp: string
+  error?: string
+}
 
-  constructor(config: DatabaseConfig = {}) {
-    this.config = {
-      connectionString: config.connectionString || process.env.DATABASE_URL,
+export class DatabaseClient {
+  private pool: Pool
+  private metrics: QueryMetrics[] = []
+  private maxMetricsSize = 1000  // Keep last 1000 queries
+
+  constructor(config: DatabaseConfig) {
+    const poolConfig: PoolConfig = {
       host: config.host || process.env.DB_HOST || 'localhost',
-      port: config.port || Number(process.env.DB_PORT) || 5432,
-      database: config.database || process.env.DB_NAME || 'ucc_intelligence',
+      port: config.port || parseInt(process.env.DB_PORT || '5432'),
+      database: config.database || process.env.DB_NAME || 'ucc_mca_db',
       user: config.user || process.env.DB_USER || 'postgres',
-      password: config.password || process.env.DB_PASSWORD,
-      ssl: config.ssl !== undefined ? config.ssl : process.env.DB_SSL === 'true',
-      poolSize: config.poolSize || Number(process.env.DATABASE_POOL_SIZE) || 20,
+      password: config.password || process.env.DB_PASSWORD || '',
+      max: config.max || 20,  // Default: 20 connections
+      min: config.min || 2,   // Default: 2 idle connections
       idleTimeoutMillis: config.idleTimeoutMillis || 30000,
       connectionTimeoutMillis: config.connectionTimeoutMillis || 10000,
-      queryTimeoutMillis: config.queryTimeoutMillis || Number(process.env.DATABASE_TIMEOUT) || 30000,
-      enableQueryLogging: config.enableQueryLogging !== undefined
-        ? config.enableQueryLogging
-        : process.env.NODE_ENV === 'development'
+      statement_timeout: config.statement_timeout || 30000,  // 30 second timeout
+      query_timeout: config.query_timeout || 30000,
+      ssl: config.ssl || false,
+      // Logging
+      log: (msg) => logger.debug('PostgreSQL:', msg)
     }
+
+    this.pool = new Pool(poolConfig)
+
+    // Handle pool errors
+    this.pool.on('error', (err) => {
+      logger.error('Unexpected error on idle client', err)
+    })
+
+    // Handle pool connection
+    this.pool.on('connect', (client) => {
+      logger.debug('New client connected to database')
+    })
+
+    // Handle pool removal
+    this.pool.on('remove', () => {
+      logger.debug('Client removed from pool')
+    })
+
+    logger.info('Database client initialized', {
+      host: poolConfig.host,
+      database: poolConfig.database,
+      maxConnections: poolConfig.max
+    })
   }
 
   /**
-   * Initialize database connection pool
-   */
-  async connect(): Promise<void> {
-    if (this.pool) {
-      console.warn('[Database] Already connected')
-      return
-    }
-
-    try {
-      this.pool = new Pool({
-        connectionString: this.config.connectionString,
-        host: this.config.host,
-        port: this.config.port,
-        database: this.config.database,
-        user: this.config.user,
-        password: this.config.password,
-        ssl: this.config.ssl,
-        max: this.config.poolSize,
-        idleTimeoutMillis: this.config.idleTimeoutMillis,
-        connectionTimeoutMillis: this.config.connectionTimeoutMillis,
-        statement_timeout: this.config.queryTimeoutMillis,
-      })
-
-      // Test connection
-      const client = await this.pool.connect()
-      await client.query('SELECT NOW()')
-      client.release()
-
-      this.isConnected = true
-      console.log('[Database] Connected successfully')
-    } catch (error) {
-      console.error('[Database] Connection failed:', error)
-      throw new Error(`Failed to connect to database: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-  }
-
-  /**
-   * Close database connection pool
-   */
-  async disconnect(): Promise<void> {
-    if (!this.pool) {
-      return
-    }
-
-    try {
-      await this.pool.end()
-      this.pool = null
-      this.isConnected = false
-      console.log('[Database] Disconnected successfully')
-    } catch (error) {
-      console.error('[Database] Error during disconnect:', error)
-      throw error
-    }
-  }
-
-  /**
-   * Execute a query with retry logic and timeout
+   * Execute a query
    */
   async query<T extends QueryResultRow = any>(
     text: string,
     params?: any[],
-    options: QueryOptions = {}
+    options?: QueryOptions
   ): Promise<QueryResult<T>> {
-    if (!this.pool) {
-      throw new Error('Database not connected. Call connect() first.')
-    }
-
-    const {
-      timeout = this.config.queryTimeoutMillis,
-      retries = 3,
-      logQuery = this.config.enableQueryLogging
-    } = options
-
-    if (logQuery) {
-      console.log('[Database Query]', text, params)
-    }
-
+    const startTime = Date.now()
+    const retries = options?.retries || 1
     let lastError: Error | null = null
 
-    for (let attempt = 1; attempt <= retries; attempt++) {
+    for (let attempt = 0; attempt < retries; attempt++) {
       try {
-        const startTime = Date.now()
-
-        // Execute query with timeout
-        const result = await Promise.race<QueryResult<T>>([
-          this.pool.query<T>(text, params),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Query timeout')), timeout)
-          )
-        ])
-
-        const duration = Date.now() - startTime
-        this.queryCount++
-
-        if (logQuery || duration > 1000) {
-          console.log(`[Database] Query completed in ${duration}ms`)
+        if (options?.logQuery !== false) {
+          logger.debug('Executing query', {
+            query: text,
+            params: params,
+            attempt: attempt + 1
+          })
         }
 
-        return result
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error('Unknown error')
-        this.errorCount++
+        const result = await this.pool.query<T>(text, params)
 
-        if (attempt < retries) {
-          const delay = Math.pow(2, attempt) * 100 // Exponential backoff
-          console.warn(`[Database] Query failed (attempt ${attempt}/${retries}), retrying in ${delay}ms...`, error)
-          await new Promise(resolve => setTimeout(resolve, delay))
+        const duration = Date.now() - startTime
+
+        // Record metrics
+        this.recordMetrics({
+          query: text,
+          duration,
+          rows: result.rowCount || 0,
+          timestamp: new Date().toISOString()
+        })
+
+        logger.debug('Query completed', {
+          duration: `${duration}ms`,
+          rows: result.rowCount
+        })
+
+        return result
+
+      } catch (error) {
+        lastError = error as Error
+        const duration = Date.now() - startTime
+
+        logger.error('Query failed', {
+          query: text,
+          error: lastError.message,
+          duration: `${duration}ms`,
+          attempt: attempt + 1
+        })
+
+        // Record error metrics
+        this.recordMetrics({
+          query: text,
+          duration,
+          rows: 0,
+          timestamp: new Date().toISOString(),
+          error: lastError.message
+        })
+
+        // Don't retry on certain errors
+        if (this.isNonRetryableError(lastError)) {
+          break
+        }
+
+        // Wait before retry
+        if (attempt < retries - 1) {
+          await this.sleep(Math.pow(2, attempt) * 100)  // Exponential backoff
         }
       }
     }
 
-    throw new Error(`Query failed after ${retries} attempts: ${lastError?.message}`)
+    throw lastError
   }
 
   /**
-   * Execute a query and return a single row
-   */
-  async queryOne<T extends QueryResultRow = any>(
-    text: string,
-    params?: any[],
-    options?: QueryOptions
-  ): Promise<T | null> {
-    const result = await this.query<T>(text, params, options)
-    return result.rows[0] || null
-  }
-
-  /**
-   * Execute a query and return all rows
-   */
-  async queryMany<T extends QueryResultRow = any>(
-    text: string,
-    params?: any[],
-    options?: QueryOptions
-  ): Promise<T[]> {
-    const result = await this.query<T>(text, params, options)
-    return result.rows
-  }
-
-  /**
-   * Get a client from the pool for transaction support
-   */
-  async getClient(): Promise<PoolClient> {
-    if (!this.pool) {
-      throw new Error('Database not connected. Call connect() first.')
-    }
-    return await this.pool.connect()
-  }
-
-  /**
-   * Execute queries within a transaction
+   * Execute a transaction
    */
   async transaction<T>(
     callback: (client: PoolClient) => Promise<T>
   ): Promise<T> {
-    const client = await this.getClient()
+    const client = await this.pool.connect()
 
     try {
       await client.query('BEGIN')
+      logger.debug('Transaction started')
+
       const result = await callback(client)
+
       await client.query('COMMIT')
+      logger.debug('Transaction committed')
+
       return result
+
     } catch (error) {
       await client.query('ROLLBACK')
+      logger.error('Transaction rolled back', { error })
       throw error
+
     } finally {
       client.release()
     }
   }
 
   /**
-   * Get connection statistics
+   * Get a client from the pool (for manual transaction control)
    */
-  getStats() {
-    return {
-      connected: this.isConnected,
-      totalQueries: this.queryCount,
-      errorCount: this.errorCount,
-      poolSize: this.pool?.totalCount || 0,
-      idleConnections: this.pool?.idleCount || 0,
-      activeConnections: (this.pool?.totalCount || 0) - (this.pool?.idleCount || 0),
-      waitingClients: this.pool?.waitingCount || 0,
+  async getClient(): Promise<PoolClient> {
+    return await this.pool.connect()
+  }
+
+  /**
+   * Test database connection
+   */
+  async ping(): Promise<boolean> {
+    try {
+      await this.query('SELECT 1 as ping')
+      return true
+    } catch (error) {
+      logger.error('Database ping failed', { error })
+      return false
     }
   }
 
   /**
-   * Health check
+   * Get pool statistics
    */
-  async healthCheck(): Promise<boolean> {
-    try {
-      await this.query('SELECT 1')
-      return true
-    } catch (error) {
-      console.error('[Database] Health check failed:', error)
-      return false
+  getStats() {
+    return {
+      total: this.pool.totalCount,
+      idle: this.pool.idleCount,
+      waiting: this.pool.waitingCount
     }
+  }
+
+  /**
+   * Get query metrics
+   */
+  getMetrics(): QueryMetrics[] {
+    return [...this.metrics]
+  }
+
+  /**
+   * Get average query duration
+   */
+  getAverageQueryDuration(): number {
+    if (this.metrics.length === 0) return 0
+
+    const total = this.metrics.reduce((sum, m) => sum + m.duration, 0)
+    return total / this.metrics.length
+  }
+
+  /**
+   * Get slow queries (above threshold)
+   */
+  getSlowQueries(thresholdMs: number = 1000): QueryMetrics[] {
+    return this.metrics.filter(m => m.duration > thresholdMs)
+  }
+
+  /**
+   * Clear metrics
+   */
+  clearMetrics(): void {
+    this.metrics = []
+  }
+
+  /**
+   * Close all connections
+   */
+  async close(): Promise<void> {
+    logger.info('Closing database connection pool')
+    await this.pool.end()
+  }
+
+  /**
+   * Record query metrics
+   */
+  private recordMetrics(metrics: QueryMetrics): void {
+    this.metrics.push(metrics)
+
+    // Trim metrics if exceeding max size
+    if (this.metrics.length > this.maxMetricsSize) {
+      this.metrics.shift()
+    }
+  }
+
+  /**
+   * Check if error is non-retryable
+   */
+  private isNonRetryableError(error: Error): boolean {
+    const nonRetryableErrors = [
+      'syntax error',
+      'permission denied',
+      'relation does not exist',
+      'column does not exist',
+      'duplicate key value',
+      'violates foreign key constraint',
+      'violates not-null constraint',
+      'invalid input syntax'
+    ]
+
+    return nonRetryableErrors.some(msg =>
+      error.message.toLowerCase().includes(msg)
+    )
+  }
+
+  /**
+   * Sleep helper
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 }
 
@@ -256,22 +316,18 @@ class DatabaseClient {
 let dbClient: DatabaseClient | null = null
 
 /**
- * Get or create database client singleton
+ * Get database client instance
  */
 export function getDatabase(config?: DatabaseConfig): DatabaseClient {
-  if (!dbClient) {
+  if (!dbClient && config) {
     dbClient = new DatabaseClient(config)
   }
-  return dbClient
-}
 
-/**
- * Initialize database connection
- */
-export async function initDatabase(config?: DatabaseConfig): Promise<DatabaseClient> {
-  const db = getDatabase(config)
-  await db.connect()
-  return db
+  if (!dbClient) {
+    throw new Error('Database client not initialized. Call getDatabase(config) first.')
+  }
+
+  return dbClient
 }
 
 /**
@@ -279,10 +335,7 @@ export async function initDatabase(config?: DatabaseConfig): Promise<DatabaseCli
  */
 export async function closeDatabase(): Promise<void> {
   if (dbClient) {
-    await dbClient.disconnect()
+    await dbClient.close()
     dbClient = null
   }
 }
-
-export { DatabaseClient }
-export default getDatabase

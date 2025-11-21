@@ -1,385 +1,294 @@
 /**
- * Database Queries - Typed query helpers
+ * Database Query Utilities
  *
- * Provides type-safe database query functions
+ * Provides type-safe query builders and common database operations
  */
 
-import type { Prospect, UCCFiling, GrowthSignal } from '../types'
 import { DatabaseClient } from './client'
+import { UCCFiling, Prospect, GrowthSignal, HealthScore } from '../types'
 
-export interface ProspectRow {
-  id: string
-  company_name: string
-  company_name_normalized: string
-  industry: string
-  state: string
-  status: string
-  priority_score: number
-  default_date: Date
-  time_since_default: number
-  last_filing_date: Date | null
-  narrative: string | null
-  estimated_revenue: number | null
-  claimed_by: string | null
-  claimed_date: Date | null
-  created_at: Date
-  updated_at: Date
-  last_enriched_at: Date | null
-  enrichment_confidence: number | null
-}
+export class QueryBuilder {
+  private client: DatabaseClient
 
-export interface UCCFilingRow {
-  id: string
-  external_id: string
-  filing_date: Date
-  debtor_name: string
-  debtor_name_normalized: string
-  secured_party: string
-  secured_party_normalized: string
-  state: string
-  lien_amount: number | null
-  status: string
-  filing_type: string
-  source: string
-  raw_data: any
-  created_at: Date
-  updated_at: Date
-}
-
-export interface GrowthSignalRow {
-  id: string
-  prospect_id: string
-  type: string
-  source: string
-  description: string
-  detected_date: Date
-  confidence: number
-  metadata: any
-  created_at: Date
-}
-
-export class DatabaseQueries {
-  constructor(private db: DatabaseClient) {}
-
-  // ============================================================================
-  // Prospects
-  // ============================================================================
-
-  /**
-   * Get all prospects with optional filters
-   */
-  async getProspects(filters?: {
-    status?: string
-    industry?: string
-    state?: string
-    minScore?: number
-    limit?: number
-    offset?: number
-  }): Promise<ProspectRow[]> {
-    let sql = 'SELECT * FROM prospects WHERE 1=1'
-    const params: any[] = []
-    let paramIndex = 1
-
-    if (filters?.status) {
-      sql += ` AND status = $${paramIndex++}`
-      params.push(filters.status)
-    }
-
-    if (filters?.industry) {
-      sql += ` AND industry = $${paramIndex++}`
-      params.push(filters.industry)
-    }
-
-    if (filters?.state) {
-      sql += ` AND state = $${paramIndex++}`
-      params.push(filters.state)
-    }
-
-    if (filters?.minScore !== undefined) {
-      sql += ` AND priority_score >= $${paramIndex++}`
-      params.push(filters.minScore)
-    }
-
-    sql += ' ORDER BY priority_score DESC, default_date DESC'
-
-    if (filters?.limit) {
-      sql += ` LIMIT $${paramIndex++}`
-      params.push(filters.limit)
-    }
-
-    if (filters?.offset) {
-      sql += ` OFFSET $${paramIndex++}`
-      params.push(filters.offset)
-    }
-
-    return await this.db.queryMany<ProspectRow>(sql, params)
-  }
-
-  /**
-   * Get a single prospect by ID
-   */
-  async getProspectById(id: string): Promise<ProspectRow | null> {
-    return await this.db.queryOne<ProspectRow>(
-      'SELECT * FROM prospects WHERE id = $1',
-      [id]
-    )
-  }
-
-  /**
-   * Search prospects by company name (fuzzy)
-   */
-  async searchProspects(query: string, limit: number = 20): Promise<ProspectRow[]> {
-    const normalized = query.toLowerCase().trim()
-    return await this.db.queryMany<ProspectRow>(
-      `SELECT * FROM prospects
-       WHERE company_name_normalized % $1
-       ORDER BY similarity(company_name_normalized, $1) DESC
-       LIMIT $2`,
-      [normalized, limit]
-    )
-  }
-
-  /**
-   * Create a new prospect
-   */
-  async createProspect(data: {
-    companyName: string
-    industry: string
-    state: string
-    priorityScore: number
-    defaultDate: Date
-    timeSinceDefault: number
-    lastFilingDate?: Date
-    narrative?: string
-    estimatedRevenue?: number
-  }): Promise<ProspectRow> {
-    const result = await this.db.queryOne<ProspectRow>(
-      `INSERT INTO prospects (
-        company_name, company_name_normalized, industry, state,
-        priority_score, default_date, time_since_default,
-        last_filing_date, narrative, estimated_revenue
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING *`,
-      [
-        data.companyName,
-        data.companyName.toLowerCase().trim(),
-        data.industry,
-        data.state,
-        data.priorityScore,
-        data.defaultDate,
-        data.timeSinceDefault,
-        data.lastFilingDate || null,
-        data.narrative || null,
-        data.estimatedRevenue || null
-      ]
-    )
-
-    if (!result) {
-      throw new Error('Failed to create prospect')
-    }
-
-    return result
-  }
-
-  /**
-   * Update prospect
-   */
-  async updateProspect(id: string, data: Partial<{
-    status: string
-    priorityScore: number
-    narrative: string
-    estimatedRevenue: number
-    claimedBy: string
-    claimedDate: Date
-  }>): Promise<ProspectRow | null> {
-    const updates: string[] = []
-    const params: any[] = []
-    let paramIndex = 1
-
-    if (data.status !== undefined) {
-      updates.push(`status = $${paramIndex++}`)
-      params.push(data.status)
-    }
-
-    if (data.priorityScore !== undefined) {
-      updates.push(`priority_score = $${paramIndex++}`)
-      params.push(data.priorityScore)
-    }
-
-    if (data.narrative !== undefined) {
-      updates.push(`narrative = $${paramIndex++}`)
-      params.push(data.narrative)
-    }
-
-    if (data.estimatedRevenue !== undefined) {
-      updates.push(`estimated_revenue = $${paramIndex++}`)
-      params.push(data.estimatedRevenue)
-    }
-
-    if (data.claimedBy !== undefined) {
-      updates.push(`claimed_by = $${paramIndex++}, claimed_date = $${paramIndex++}`)
-      params.push(data.claimedBy, data.claimedDate || new Date())
-    }
-
-    if (updates.length === 0) {
-      return await this.getProspectById(id)
-    }
-
-    updates.push(`updated_at = NOW()`)
-    params.push(id)
-
-    const sql = `
-      UPDATE prospects
-      SET ${updates.join(', ')}
-      WHERE id = $${paramIndex}
-      RETURNING *
-    `
-
-    return await this.db.queryOne<ProspectRow>(sql, params)
-  }
-
-  /**
-   * Delete prospect
-   */
-  async deleteProspect(id: string): Promise<boolean> {
-    const result = await this.db.query(
-      'DELETE FROM prospects WHERE id = $1',
-      [id]
-    )
-    return (result.rowCount || 0) > 0
+  constructor(client: DatabaseClient) {
+    this.client = client
   }
 
   // ============================================================================
-  // UCC Filings
+  // UCC FILINGS
   // ============================================================================
-
-  /**
-   * Get UCC filings for a prospect
-   */
-  async getProspectUCCFilings(prospectId: string): Promise<UCCFilingRow[]> {
-    return await this.db.queryMany<UCCFilingRow>(
-      `SELECT uf.* FROM ucc_filings uf
-       INNER JOIN prospect_ucc_filings puf ON uf.id = puf.ucc_filing_id
-       WHERE puf.prospect_id = $1
-       ORDER BY uf.filing_date DESC`,
-      [prospectId]
-    )
-  }
 
   /**
    * Create UCC filing
    */
-  async createUCCFiling(data: {
-    externalId: string
-    filingDate: Date
-    debtorName: string
-    securedParty: string
-    state: string
-    lienAmount?: number
-    status: string
-    filingType: string
-    source: string
-    rawData?: any
-  }): Promise<UCCFilingRow> {
-    const result = await this.db.queryOne<UCCFilingRow>(
-      `INSERT INTO ucc_filings (
-        external_id, filing_date, debtor_name, debtor_name_normalized,
-        secured_party, secured_party_normalized, state, lien_amount,
-        status, filing_type, source, raw_data
+  async createUCCFiling(filing: Partial<UCCFiling>): Promise<UCCFiling> {
+    const query = `
+      INSERT INTO ucc_filings (
+        file_number, filing_date, debtor_name, debtor_address,
+        secured_party_name, secured_party_address, collateral_description,
+        amount, state, status, lapse_date, source, raw_data
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING *
+    `
+
+    const values = [
+      filing.fileNumber,
+      filing.filingDate,
+      filing.debtorName,
+      filing.debtorAddress,
+      filing.securedParty,
+      filing.securedPartyAddress,
+      filing.collateral,
+      filing.amount,
+      filing.state,
+      filing.status || 'active',
+      filing.lapseDate,
+      filing.source,
+      JSON.stringify(filing)
+    ]
+
+    const result = await this.client.query<UCCFiling>(query, values)
+    return result.rows[0]
+  }
+
+  /**
+   * Get UCC filings by state
+   */
+  async getUCCFilingsByState(state: string, limit: number = 100): Promise<UCCFiling[]> {
+    const query = `
+      SELECT * FROM ucc_filings
+      WHERE state = $1 AND status = 'active'
+      ORDER BY filing_date DESC
+      LIMIT $2
+    `
+
+    const result = await this.client.query<UCCFiling>(query, [state, limit])
+    return result.rows
+  }
+
+  /**
+   * Search UCC filings by debtor name
+   */
+  async searchUCCFilings(debtorName: string, limit: number = 50): Promise<UCCFiling[]> {
+    const query = `
+      SELECT * FROM ucc_filings
+      WHERE debtor_name ILIKE $1
+      ORDER BY filing_date DESC
+      LIMIT $2
+    `
+
+    const result = await this.client.query<UCCFiling>(query, [`%${debtorName}%`, limit])
+    return result.rows
+  }
+
+  /**
+   * Get UCC filing by file number
+   */
+  async getUCCFilingByNumber(fileNumber: string): Promise<UCCFiling | null> {
+    const query = 'SELECT * FROM ucc_filings WHERE file_number = $1'
+    const result = await this.client.query<UCCFiling>(query, [fileNumber])
+    return result.rows[0] || null
+  }
+
+  // ============================================================================
+  // PROSPECTS
+  // ============================================================================
+
+  /**
+   * Create prospect
+   */
+  async createProspect(prospect: Partial<Prospect>): Promise<Prospect> {
+    const query = `
+      INSERT INTO prospects (
+        company_id, status, priority_score, health_grade, health_score,
+        default_date, days_since_default, estimated_opportunity,
+        assigned_to, narrative, tags, metadata
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      ON CONFLICT (external_id) DO UPDATE SET
-        status = EXCLUDED.status,
-        updated_at = NOW()
-      RETURNING *`,
-      [
-        data.externalId,
-        data.filingDate,
-        data.debtorName,
-        data.debtorName.toLowerCase().trim(),
-        data.securedParty,
-        data.securedParty.toLowerCase().trim(),
-        data.state,
-        data.lienAmount || null,
-        data.status,
-        data.filingType,
-        data.source,
-        data.rawData ? JSON.stringify(data.rawData) : null
-      ]
-    )
+      RETURNING *
+    `
 
-    if (!result) {
-      throw new Error('Failed to create UCC filing')
-    }
+    const values = [
+      prospect.id,  // company_id
+      prospect.status || 'new',
+      prospect.priorityScore || 0,
+      prospect.healthScore?.grade || 'C',
+      prospect.healthScore?.overall || 50,
+      prospect.defaultDate,
+      prospect.timeSinceDefault,
+      prospect.estimatedRevenue,
+      null,  // assigned_to
+      prospect.narrative,
+      prospect.tags || [],
+      JSON.stringify({})
+    ]
 
-    return result
+    const result = await this.client.query<Prospect>(query, values)
+    return result.rows[0]
   }
 
   /**
-   * Link UCC filing to prospect
+   * Get prospects by status
    */
-  async linkUCCFilingToProspect(prospectId: string, uccFilingId: string): Promise<void> {
-    await this.db.query(
-      `INSERT INTO prospect_ucc_filings (prospect_id, ucc_filing_id)
-       VALUES ($1, $2)
-       ON CONFLICT DO NOTHING`,
-      [prospectId, uccFilingId]
-    )
-  }
+  async getProspectsByStatus(status: string, limit: number = 100): Promise<Prospect[]> {
+    const query = `
+      SELECT p.*, c.name as company_name, c.industry, c.state
+      FROM prospects p
+      JOIN companies c ON p.company_id = c.id
+      WHERE p.status = $1
+      ORDER BY p.priority_score DESC
+      LIMIT $2
+    `
 
-  // ============================================================================
-  // Growth Signals
-  // ============================================================================
+    const result = await this.client.query<Prospect>(query, [status, limit])
+    return result.rows
+  }
 
   /**
-   * Get growth signals for a prospect
+   * Get top priority prospects
    */
-  async getProspectGrowthSignals(prospectId: string): Promise<GrowthSignalRow[]> {
-    return await this.db.queryMany<GrowthSignalRow>(
-      `SELECT * FROM growth_signals
-       WHERE prospect_id = $1
-       ORDER BY detected_date DESC`,
-      [prospectId]
-    )
+  async getTopProspects(limit: number = 50): Promise<Prospect[]> {
+    const query = `
+      SELECT p.*, c.name as company_name, c.industry, c.state,
+             COUNT(DISTINCT gs.id) as growth_signal_count
+      FROM prospects p
+      JOIN companies c ON p.company_id = c.id
+      LEFT JOIN growth_signals gs ON p.id = gs.prospect_id
+      WHERE p.status NOT IN ('closed-won', 'closed-lost')
+      GROUP BY p.id, c.id
+      ORDER BY p.priority_score DESC, growth_signal_count DESC
+      LIMIT $1
+    `
+
+    const result = await this.client.query<Prospect>(query, [limit])
+    return result.rows
   }
+
+  /**
+   * Update prospect status
+   */
+  async updateProspectStatus(prospectId: string, status: string): Promise<void> {
+    const query = 'UPDATE prospects SET status = $1 WHERE id = $2'
+    await this.client.query(query, [status, prospectId])
+  }
+
+  /**
+   * Update prospect priority score
+   */
+  async updateProspectPriority(prospectId: string, score: number): Promise<void> {
+    const query = 'UPDATE prospects SET priority_score = $1 WHERE id = $2'
+    await this.client.query(query, [score, prospectId])
+  }
+
+  // ============================================================================
+  // GROWTH SIGNALS
+  // ============================================================================
 
   /**
    * Create growth signal
    */
-  async createGrowthSignal(data: {
-    prospectId: string
-    type: string
-    source: string
-    description: string
-    detectedDate: Date
-    confidence: number
-    metadata?: any
-  }): Promise<GrowthSignalRow> {
-    const result = await this.db.queryOne<GrowthSignalRow>(
-      `INSERT INTO growth_signals (
-        prospect_id, type, source, description,
-        detected_date, confidence, metadata
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *`,
-      [
-        data.prospectId,
-        data.type,
-        data.source,
-        data.description,
-        data.detectedDate,
-        data.confidence,
-        data.metadata ? JSON.stringify(data.metadata) : null
-      ]
-    )
+  async createGrowthSignal(signal: Partial<GrowthSignal> & { companyId: string, prospectId: string }): Promise<void> {
+    const query = `
+      INSERT INTO growth_signals (
+        company_id, prospect_id, signal_type, description,
+        signal_date, source, confidence, impact, amount, url, raw_data
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `
 
-    if (!result) {
-      throw new Error('Failed to create growth signal')
-    }
+    const values = [
+      signal.companyId,
+      signal.prospectId,
+      signal.type,
+      signal.description,
+      signal.date,
+      signal.source,
+      signal.confidence,
+      signal.impact,
+      0,  // amount
+      null,  // url
+      JSON.stringify(signal)
+    ]
 
-    return result
+    await this.client.query(query, values)
+  }
+
+  /**
+   * Get growth signals for prospect
+   */
+  async getGrowthSignalsForProspect(prospectId: string): Promise<GrowthSignal[]> {
+    const query = `
+      SELECT * FROM growth_signals
+      WHERE prospect_id = $1
+      ORDER BY signal_date DESC
+    `
+
+    const result = await this.client.query<GrowthSignal>(query, [prospectId])
+    return result.rows
   }
 
   // ============================================================================
-  // Statistics & Analytics
+  // HEALTH METRICS
+  // ============================================================================
+
+  /**
+   * Create health metric
+   */
+  async createHealthMetric(companyId: string, healthScore: HealthScore): Promise<void> {
+    const query = `
+      INSERT INTO health_metrics (
+        company_id, metric_date, overall_score,
+        payment_history_score, online_reputation_score,
+        legal_compliance_score, financial_stability_score
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `
+
+    const values = [
+      companyId,
+      new Date().toISOString().split('T')[0],  // Today's date
+      healthScore.overall,
+      healthScore.factors.paymentHistory,
+      healthScore.factors.onlineReputation,
+      healthScore.factors.legalCompliance,
+      healthScore.factors.financialStability
+    ]
+
+    await this.client.query(query, values)
+  }
+
+  /**
+   * Get latest health metric for company
+   */
+  async getLatestHealthMetric(companyId: string): Promise<HealthScore | null> {
+    const query = `
+      SELECT * FROM health_metrics
+      WHERE company_id = $1
+      ORDER BY metric_date DESC
+      LIMIT 1
+    `
+
+    const result = await this.client.query(query, [companyId])
+
+    if (result.rows.length === 0) return null
+
+    const row = result.rows[0]
+    return {
+      overall: row.overall_score,
+      grade: this.scoreToGrade(row.overall_score),
+      factors: {
+        paymentHistory: row.payment_history_score,
+        onlineReputation: row.online_reputation_score,
+        legalCompliance: row.legal_compliance_score,
+        financialStability: row.financial_stability_score
+      },
+      trends: {
+        improving: false,  // Would need historical comparison
+        recentChanges: []
+      },
+      lastUpdated: row.created_at
+    }
+  }
+
+  // ============================================================================
+  // ANALYTICS
   // ============================================================================
 
   /**
@@ -387,34 +296,83 @@ export class DatabaseQueries {
    */
   async getProspectStats(): Promise<{
     total: number
-    byStatus: Record<string, number>
-    byIndustry: Record<string, number>
-    avgScore: number
+    by_status: Record<string, number>
+    avg_priority_score: number
+    avg_health_score: number
   }> {
-    const [
-      totalResult,
-      byStatusResult,
-      byIndustryResult,
-      avgScoreResult
-    ] = await Promise.all([
-      this.db.queryOne<{ count: string }>('SELECT COUNT(*)::text as count FROM prospects'),
-      this.db.queryMany<{ status: string; count: string }>('SELECT status, COUNT(*)::text as count FROM prospects GROUP BY status'),
-      this.db.queryMany<{ industry: string; count: string }>('SELECT industry, COUNT(*)::text as count FROM prospects GROUP BY industry'),
-      this.db.queryOne<{ avg: string }>('SELECT AVG(priority_score)::text as avg FROM prospects')
-    ])
+    const query = `
+      SELECT
+        COUNT(*) as total,
+        AVG(priority_score) as avg_priority,
+        AVG(health_score) as avg_health,
+        json_object_agg(status, status_count) as by_status
+      FROM (
+        SELECT
+          status,
+          COUNT(*) as status_count,
+          AVG(priority_score)::numeric as avg_priority,
+          AVG(health_score)::numeric as avg_health
+        FROM prospects
+        GROUP BY status
+      ) stats
+    `
+
+    const result = await this.client.query(query)
+    const row = result.rows[0]
 
     return {
-      total: parseInt(totalResult?.count || '0', 10),
-      byStatus: Object.fromEntries(byStatusResult.map(r => [r.status, parseInt(r.count, 10)])),
-      byIndustry: Object.fromEntries(byIndustryResult.map(r => [r.industry, parseInt(r.count, 10)])),
-      avgScore: parseFloat(avgScoreResult?.avg || '0')
+      total: parseInt(row.total),
+      by_status: row.by_status || {},
+      avg_priority_score: parseFloat(row.avg_priority) || 0,
+      avg_health_score: parseFloat(row.avg_health) || 0
     }
+  }
+
+  /**
+   * Get data source performance
+   */
+  async getDataSourcePerformance(): Promise<any[]> {
+    const query = 'SELECT * FROM v_data_source_performance ORDER BY total_requests DESC'
+    const result = await this.client.query(query)
+    return result.rows
+  }
+
+  // ============================================================================
+  // UTILITIES
+  // ============================================================================
+
+  /**
+   * Convert score to grade
+   */
+  private scoreToGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
+    if (score >= 90) return 'A'
+    if (score >= 80) return 'B'
+    if (score >= 70) return 'C'
+    if (score >= 60) return 'D'
+    return 'F'
+  }
+
+  /**
+   * Bulk insert (for performance)
+   */
+  async bulkInsert(table: string, columns: string[], values: any[][]): Promise<void> {
+    if (values.length === 0) return
+
+    const placeholders = values.map((_, i) => {
+      const rowPlaceholders = columns.map((_, j) => `$${i * columns.length + j + 1}`)
+      return `(${rowPlaceholders.join(', ')})`
+    }).join(', ')
+
+    const query = `INSERT INTO ${table} (${columns.join(', ')}) VALUES ${placeholders}`
+    const flatValues = values.flat()
+
+    await this.client.query(query, flatValues)
   }
 }
 
 /**
- * Create database queries instance
+ * Create query builder instance
  */
-export function createQueries(db: DatabaseClient): DatabaseQueries {
-  return new DatabaseQueries(db)
+export function createQueryBuilder(client: DatabaseClient): QueryBuilder {
+  return new QueryBuilder(client)
 }
