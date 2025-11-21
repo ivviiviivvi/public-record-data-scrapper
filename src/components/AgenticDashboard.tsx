@@ -20,7 +20,12 @@ import {
   Shield,
   Sparkle,
   Users,
+<<<<<<< HEAD
+  Target,
+  LightbulbFilament
+=======
   Target
+>>>>>>> origin/main
 } from '@phosphor-icons/react'
 import { Improvement, ImprovementPriority, ImprovementCategory } from '@/lib/agentic/types'
 import { UseAgenticEngineResult } from '@/hooks/use-agentic-engine'
@@ -44,12 +49,12 @@ export function AgenticDashboard({ agentic, competitors }: AgenticDashboardProps
   }
 
   const categoryIcons: Record<ImprovementCategory, ReactNode> = {
-    'performance': <TrendUp className="w-4 h-4" />,
-    'security': <Shield className="w-4 h-4" />,
-    'usability': <Sparkle className="w-4 h-4" />,
+    performance: <TrendUp className="w-4 h-4" />,
+    security: <Shield className="w-4 h-4" />,
+    usability: <Sparkle className="w-4 h-4" />,
     'data-quality': <Brain className="w-4 h-4" />,
     'feature-enhancement': <CheckCircle className="w-4 h-4" />,
-    'strategic': <Target className="w-4 h-4" />,
+    strategic: <Target className="w-4 h-4" />,
     'competitor-intelligence': <Users className="w-4 h-4" />
   }
 
