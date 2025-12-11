@@ -61,18 +61,6 @@ describe('DataIngestionService', () => {
 
   describe('ingestData()', () => {
     it('should ingest data from all configured sources', async () => {
-      const mockFilings: UCCFiling[] = [
-        {
-          id: 'ucc-1',
-          filingDate: '2024-01-15',
-          debtorName: 'Test Company',
-          securedParty: 'Test Bank',
-          state: 'NY',
-          status: 'lapsed',
-          filingType: 'UCC-1'
-        }
-      ]
-
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
         json: async () => [
