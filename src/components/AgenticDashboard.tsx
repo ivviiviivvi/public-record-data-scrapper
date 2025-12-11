@@ -4,7 +4,6 @@
  * Displays autonomous system improvements, agent analyses, and execution status
  */
 
-<<<<<<< HEAD
 import { type ReactNode, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,12 +20,9 @@ import {
   Shield,
   Sparkle,
   Users,
-<<<<<<< HEAD
   Target,
   LightbulbFilament
-=======
   Target
->>>>>>> origin/main
 } from '@phosphor-icons/react'
 import { Improvement, ImprovementPriority, ImprovementCategory } from '@/lib/agentic/types'
 import { UseAgenticEngineResult } from '@/hooks/use-agentic-engine'
@@ -156,13 +152,10 @@ export function AgenticDashboard({ agentic, competitors }: AgenticDashboardProps
             <TabsTrigger value="pending">
               Pending ({pendingImprovements.length})
             </TabsTrigger>
-<<<<<<< HEAD
             <TabsTrigger value="competitor">
               <Users className="w-4 h-4 mr-2" />
               Competitors ({competitorCount})
             </TabsTrigger>
-=======
->>>>>>> origin/main
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -213,7 +206,6 @@ export function AgenticDashboard({ agentic, competitors }: AgenticDashboardProps
               ))
             )}
           </TabsContent>
-<<<<<<< HEAD
           <TabsContent value="competitor">
             <CompetitorAnalysis
               data={competitors}
@@ -221,8 +213,6 @@ export function AgenticDashboard({ agentic, competitors }: AgenticDashboardProps
               lastUpdated={competitorLastUpdated}
             />
           </TabsContent>
-=======
->>>>>>> origin/main
         </Tabs>
       </div>
     </Card>
@@ -233,11 +223,8 @@ interface ImprovementCardProps {
   improvement: Improvement
   onApprove: (id: string) => Promise<void>
   priorityColors: Record<ImprovementPriority, string>
-<<<<<<< HEAD
   categoryDetails: Record<ImprovementCategory, { icon: ReactNode; label: string }>
-=======
   categoryIcons: Record<ImprovementCategory, ReactNode>
->>>>>>> origin/main
   showActions?: boolean
 }
 
