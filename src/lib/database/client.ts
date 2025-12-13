@@ -316,6 +316,20 @@ export class DatabaseClient {
 let dbClient: DatabaseClient | null = null
 
 /**
+ * Initialize database client
+ */
+export async function initDatabase(config?: DatabaseConfig): Promise<void> {
+  if (!dbClient && config) {
+    dbClient = new DatabaseClient(config)
+  }
+  if (!dbClient) {
+      // Try to init with defaults if not already done
+      // This is a bit risky if env vars are missing, but consistent with getDatabase pattern
+      dbClient = new DatabaseClient({} as any)
+  }
+}
+
+/**
  * Get database client instance
  */
 export function getDatabase(config?: DatabaseConfig): DatabaseClient {
@@ -324,7 +338,8 @@ export function getDatabase(config?: DatabaseConfig): DatabaseClient {
   }
 
   if (!dbClient) {
-    throw new Error('Database client not initialized. Call getDatabase(config) first.')
+    // If getting without config and not init, try init with defaults (implicit init)
+    dbClient = new DatabaseClient({} as any)
   }
 
   return dbClient

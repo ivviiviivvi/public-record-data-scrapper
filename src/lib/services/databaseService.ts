@@ -245,11 +245,17 @@ export async function fetchCompetitorData(): Promise<CompetitorData[]> {
 }
 
 /**
- * Fetch portfolio companies (placeholder - needs data source)
+ * Fetch portfolio companies
  */
 export async function fetchPortfolioCompanies(): Promise<PortfolioCompany[]> {
-  // TODO: Implement when we have portfolio tracking
-  return []
+  try {
+    const db = getDatabase()
+    const queries = createQueries(db)
+    return await queries.getPortfolioCompanies()
+  } catch (error) {
+    console.error('Failed to fetch portfolio companies:', error)
+    throw error
+  }
 }
 
 /**
