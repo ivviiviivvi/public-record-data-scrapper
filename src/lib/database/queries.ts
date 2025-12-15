@@ -358,6 +358,18 @@ export class QueryBuilder {
   async bulkInsert(table: string, columns: string[], values: any[][]): Promise<void> {
     if (values.length === 0) return
 
+    // Validate table name (alphanumeric and underscores only)
+    if (!/^[a-zA-Z0-9_]+$/.test(table)) {
+      throw new Error(`Invalid table name: ${table}`)
+    }
+
+    // Validate column names
+    for (const column of columns) {
+      if (!/^[a-zA-Z0-9_]+$/.test(column)) {
+        throw new Error(`Invalid column name: ${column}`)
+      }
+    }
+
     const placeholders = values.map((_, i) => {
       const rowPlaceholders = columns.map((_, j) => `$${i * columns.length + j + 1}`)
       return `(${rowPlaceholders.join(', ')})`
