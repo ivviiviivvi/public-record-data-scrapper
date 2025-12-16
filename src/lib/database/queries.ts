@@ -358,6 +358,10 @@ export class QueryBuilder {
   async bulkInsert(table: string, columns: string[], values: any[][]): Promise<void> {
     if (values.length === 0) return
 
+    // Validate identifiers to prevent SQL injection
+    this.validateIdentifier(table)
+    columns.forEach(col => this.validateIdentifier(col))
+
     const placeholders = values.map((_, i) => {
       const rowPlaceholders = columns.map((_, j) => `$${i * columns.length + j + 1}`)
       return `(${rowPlaceholders.join(', ')})`
@@ -367,6 +371,16 @@ export class QueryBuilder {
     const flatValues = values.flat()
 
     await this.client.query(query, flatValues)
+  }
+
+  /**
+   * Validate SQL identifier
+   */
+  private validateIdentifier(identifier: string): void {
+    // Allow alphanumeric, underscore, and dot (for schema.table)
+    if (!/^[a-zA-Z0-9_.]+$/.test(identifier)) {
+      throw new Error(`Invalid identifier: ${identifier}`)
+    }
   }
 }
 
