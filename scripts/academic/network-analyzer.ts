@@ -359,6 +359,7 @@ export class NetworkAnalyzer {
 
         const researcher = researchers.get(author.id)!
         researcher.papers.push(paper.id)
+        researcher.citation_count += paper.citationCount
 
         // Update date range
         if (paper.publicationDate < researcher.first_publication) {
