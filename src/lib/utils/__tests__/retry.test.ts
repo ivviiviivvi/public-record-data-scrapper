@@ -69,9 +69,13 @@ describe('retry', () => {
       }
 
       const promise = retry(fn, options)
+
+      // Attach expectation before running timers to avoid unhandled rejection
+      const expectPromise = expect(promise).rejects.toThrow(RetryError)
+
       await vi.runAllTimersAsync()
 
-      await expect(promise).rejects.toThrow(RetryError)
+      await expectPromise
       await expect(promise).rejects.toMatchObject({
         attempts: 3,
         lastError: error
@@ -211,11 +215,14 @@ describe('retryIf', () => {
 
     const promise = retryIf(fn, shouldRetry, options)
 
+    // Attach expectation before running timers to avoid unhandled rejection
+    const expectPromise = expect(promise).rejects.toThrow('Bad Request')
+
     // Run timers to advance through retries
     await vi.runAllTimersAsync()
 
     // Expect promise to reject with final error
-    await expect(promise).rejects.toThrow('Bad Request')
+    await expectPromise
 
     expect(fn).toHaveBeenCalledTimes(2) // Retried once, then failed
   })
@@ -236,6 +243,13 @@ describe('retryIf', () => {
     await expect(promise).rejects.toThrow('Non-retryable error')
 
     expect(fn).toHaveBeenCalledTimes(1) // No retries
+
+    // Catch any remaining unhandled rejections if the promise continues to execute
+    try {
+        await promise
+    } catch {
+        // ignore
+    }
   })
 })
 
@@ -493,7 +507,7 @@ describe('processBatch', () => {
     expect(onError).toHaveBeenCalledWith(2, expect.any(Error))
   })
 
-  it.skip('should respect concurrency limit', async () => {
+  it('should respect concurrency limit', async () => {
     // TODO: Fix timing issues with concurrency test
     vi.useRealTimers() // Need real timers for concurrency test
 

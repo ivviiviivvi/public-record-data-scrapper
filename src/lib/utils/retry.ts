@@ -230,32 +230,45 @@ export async function processBatch<T, R>(
 
   for (let i = 0; i < items.length; i += options.batchSize) {
     const batch = items.slice(i, i + options.batchSize)
+    const activePromises: Promise<void>[] = []
 
-    // Process batch with concurrency control
-    const batchPromises = batch.map(async item => {
-      try {
-        const process = () => processor(item)
-
-        const result = options.retryOptions
-          ? await retry(process, options.retryOptions)
-          : await process()
-
-        results.push(result)
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error))
-        errors.push({ item, error: err })
-
-        if (options.onError) {
-          options.onError(item, err)
-        }
+    for (const item of batch) {
+      // Wait if concurrency limit reached
+      if (activePromises.length >= concurrency) {
+        await Promise.race(activePromises)
       }
-    })
 
-    // Process in chunks based on concurrency
-    for (let j = 0; j < batchPromises.length; j += concurrency) {
-      const chunk = batchPromises.slice(j, j + concurrency)
-      await Promise.all(chunk)
+      const promise = (async () => {
+        try {
+          const process = () => processor(item)
+
+          const result = options.retryOptions
+            ? await retry(process, options.retryOptions)
+            : await process()
+
+          results.push(result)
+        } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error))
+          errors.push({ item, error: err })
+
+          if (options.onError) {
+            options.onError(item, err)
+          }
+        }
+      })()
+
+      // Add to active promises and remove when done
+      const p = promise.then(() => {
+        const index = activePromises.indexOf(p)
+        if (index > -1) {
+          activePromises.splice(index, 1)
+        }
+      })
+      activePromises.push(p)
     }
+
+    // Wait for remaining promises in batch
+    await Promise.all(activePromises)
 
     // Small delay between batches
     if (i + options.batchSize < items.length) {
