@@ -5,8 +5,8 @@
  */
 
 import { initDatabase, getDatabase, createQueries } from '@/lib/database'
-import type { Prospect, GrowthSignal, HealthScore, CompetitorData, PortfolioCompany } from '@/lib/types'
-import type { ProspectRow, UCCFilingRow, GrowthSignalRow } from '@/lib/database/queries'
+import type { Prospect, GrowthSignal, HealthScore, CompetitorData, PortfolioCompany, IndustryType } from '@/lib/types'
+import type { ProspectRow, UCCFilingRow, GrowthSignalRow, CompetitorRow } from '@/lib/database/queries'
 
 /**
  * Initialize database connection
@@ -237,11 +237,27 @@ export async function fetchDashboardStats() {
 }
 
 /**
- * Fetch competitor data (placeholder - needs data source)
+ * Fetch competitor data
  */
 export async function fetchCompetitorData(): Promise<CompetitorData[]> {
-  // TODO: Implement when we have competitor data collection
-  return []
+  try {
+    const db = getDatabase()
+    const queries = createQueries(db)
+    const competitors = await queries.getCompetitors()
+
+    return competitors.map((row: CompetitorRow) => ({
+      lenderName: row.lender_name,
+      filingCount: row.filing_count,
+      avgDealSize: parseFloat(row.avg_deal_size),
+      marketShare: parseFloat(row.market_share),
+      industries: row.industries as IndustryType[],
+      topState: row.top_state,
+      monthlyTrend: parseFloat(row.monthly_trend)
+    }))
+  } catch (error) {
+    console.error('Failed to fetch competitor data:', error)
+    return []
+  }
 }
 
 /**
