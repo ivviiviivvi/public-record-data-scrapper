@@ -16,7 +16,7 @@
 
 import cron from 'node-cron'
 import { createScraper, ScraperFactory, ScraperImplementation, SupportedState } from './scrapers/scraper-factory'
-import { initDatabase, getDatabase, createQueries, closeDatabase } from '../src/lib/database'
+import { getDatabase, createQueryBuilder, closeDatabase } from '../src/lib/database'
 import chalk from 'chalk'
 import * as fs from 'fs/promises'
 import * as path from 'path'
@@ -35,6 +35,8 @@ interface SchedulerConfig {
   enableNotifications: boolean
   // Minimum priority score for notifications
   notificationThreshold: number
+  // Webhook URL for notifications
+  notificationWebhookUrl?: string
 }
 
 const defaultConfig: SchedulerConfig = {
@@ -43,7 +45,8 @@ const defaultConfig: SchedulerConfig = {
   implementation: (process.env.SCRAPER_IMPLEMENTATION as ScraperImplementation) || 'mock',
   companiesPerState: 5,
   enableNotifications: process.env.ENABLE_NOTIFICATIONS === 'true',
-  notificationThreshold: parseInt(process.env.NOTIFICATION_THRESHOLD || '80')
+  notificationThreshold: parseInt(process.env.NOTIFICATION_THRESHOLD || '80'),
+  notificationWebhookUrl: process.env.NOTIFICATION_WEBHOOK_URL
 }
 
 // State-specific sample companies (expanded list)
@@ -119,6 +122,75 @@ const stats: JobStats = {
 }
 
 /**
+ * Send webhook notification
+ */
+async function sendNotification(webhookUrl: string, prospect: any, priorityScore: number) {
+  try {
+    const payload = {
+      text: `🚨 *High-Value Prospect Detected* 🚨\n\n` +
+            `*Company:* ${prospect.companyName}\n` +
+            `*State:* ${prospect.state}\n` +
+            `*Industry:* ${prospect.industry}\n` +
+            `*Revenue:* $${(prospect.estimatedRevenue || 0).toLocaleString()}\n` +
+            `*Priority Score:* ${priorityScore}\n` +
+            `*Date Detected:* ${new Date().toLocaleDateString()}`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `🚨 *High-Value Prospect Detected* 🚨`
+          }
+        },
+        {
+          type: "section",
+          fields: [
+            {
+              type: "mrkdwn",
+              text: `*Company:*\n${prospect.companyName}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*State:*\n${prospect.state}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Industry:*\n${prospect.industry}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Revenue:*\n$${(prospect.estimatedRevenue || 0).toLocaleString()}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Priority Score:*\n${priorityScore}`
+            }
+          ]
+        }
+      ]
+    }
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+
+    if (!response.ok) {
+      throw new Error(`Webhook failed with status: ${response.status}`)
+    }
+
+    await log('info', `Notification sent for ${prospect.companyName}`)
+  } catch (error) {
+    await log('error', `Failed to send notification for ${prospect.companyName}`, {
+      error: error instanceof Error ? error.message : error
+    })
+  }
+}
+
+/**
  * Log to file and console
  */
 async function log(level: 'info' | 'warn' | 'error', message: string, data?: any) {
@@ -159,8 +231,8 @@ async function runScrapingJob(config: SchedulerConfig): Promise<void> {
   try {
     // Initialize database
     await log('info', 'Connecting to database')
-    const db = await initDatabase()
-    const queries = createQueries(db)
+    const db = getDatabase()
+    const queries = createQueryBuilder(db)
 
     let totalProspects = 0
     let totalFilings = 0
@@ -190,7 +262,7 @@ async function runScrapingJob(config: SchedulerConfig): Promise<void> {
             industry: company.industry,
             state,
             priorityScore,
-            defaultDate: filingDate,
+            defaultDate: filingDate.toISOString(),
             timeSinceDefault,
             estimatedRevenue: company.estimatedRevenue
           })
@@ -200,7 +272,7 @@ async function runScrapingJob(config: SchedulerConfig): Promise<void> {
           for (const filing of result.filings) {
             const uccFiling = await queries.createUCCFiling({
               externalId: filing.filingNumber,
-              filingDate: new Date(filing.filingDate),
+              filingDate: new Date(filing.filingDate).toISOString(),
               debtorName: filing.debtorName,
               securedParty: filing.securedParty,
               state,
@@ -220,7 +292,7 @@ async function runScrapingJob(config: SchedulerConfig): Promise<void> {
             type: 'hiring',
             source: 'automated-scheduler',
             description: 'Identified through automated daily screening',
-            detectedDate: new Date(),
+            detectedDate: new Date().toISOString(),
             confidence: 0.85,
             metadata: { scheduledJob: true, state, implementation: config.implementation }
           })
@@ -232,7 +304,17 @@ async function runScrapingJob(config: SchedulerConfig): Promise<void> {
               state,
               estimatedRevenue: company.estimatedRevenue
             })
-            // TODO: Implement email/webhook notification
+
+            if (config.notificationWebhookUrl) {
+              await sendNotification(config.notificationWebhookUrl, {
+                companyName: company.name,
+                industry: company.industry,
+                state,
+                estimatedRevenue: company.estimatedRevenue
+              }, priorityScore)
+            } else {
+              await log('warn', 'Notifications enabled but no webhook URL configured')
+            }
           }
         }
 

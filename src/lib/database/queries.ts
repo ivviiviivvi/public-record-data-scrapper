@@ -90,6 +90,18 @@ export class QueryBuilder {
     return result.rows[0] || null
   }
 
+  /**
+   * Link UCC filing to prospect
+   */
+  async linkUCCFilingToProspect(prospectId: string, filingId: string): Promise<void> {
+    const query = `
+      INSERT INTO prospect_ucc_filings (prospect_id, ucc_filing_id)
+      VALUES ($1, $2)
+      ON CONFLICT DO NOTHING
+    `
+    await this.client.query(query, [prospectId, filingId])
+  }
+
   // ============================================================================
   // PROSPECTS
   // ============================================================================
@@ -100,25 +112,23 @@ export class QueryBuilder {
   async createProspect(prospect: Partial<Prospect>): Promise<Prospect> {
     const query = `
       INSERT INTO prospects (
-        company_id, status, priority_score, health_grade, health_score,
-        default_date, days_since_default, estimated_opportunity,
-        assigned_to, narrative, tags, metadata
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        company_name, industry, state, status, priority_score,
+        default_date, time_since_default, estimated_revenue,
+        narrative, metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `
 
     const values = [
-      prospect.id,  // company_id
+      prospect.companyName,
+      prospect.industry,
+      prospect.state,
       prospect.status || 'new',
       prospect.priorityScore || 0,
-      prospect.healthScore?.grade || 'C',
-      prospect.healthScore?.overall || 50,
       prospect.defaultDate,
       prospect.timeSinceDefault,
       prospect.estimatedRevenue,
-      null,  // assigned_to
       prospect.narrative,
-      prospect.tags || [],
       JSON.stringify({})
     ]
 
@@ -186,25 +196,20 @@ export class QueryBuilder {
   /**
    * Create growth signal
    */
-  async createGrowthSignal(signal: Partial<GrowthSignal> & { companyId: string, prospectId: string }): Promise<void> {
+  async createGrowthSignal(signal: Partial<GrowthSignal> & { prospectId: string, type: string, source: string, confidence: number }): Promise<void> {
     const query = `
       INSERT INTO growth_signals (
-        company_id, prospect_id, signal_type, description,
-        signal_date, source, confidence, impact, amount, url, raw_data
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        prospect_id, type, description,
+        detected_date, confidence, raw_data
+      ) VALUES ($1, $2, $3, $4, $5, $6)
     `
 
     const values = [
-      signal.companyId,
       signal.prospectId,
       signal.type,
       signal.description,
-      signal.date,
-      signal.source,
+      signal.detectedDate || new Date().toISOString(),
       signal.confidence,
-      signal.impact,
-      0,  // amount
-      null,  // url
       JSON.stringify(signal)
     ]
 

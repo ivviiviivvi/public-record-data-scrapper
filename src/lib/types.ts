@@ -5,13 +5,21 @@ export type IndustryType = 'restaurant' | 'retail' | 'construction' | 'healthcar
 
 export interface UCCFiling {
   id: string
+  externalId?: string // Map to fileNumber or external_id
   filingDate: string
   debtorName: string
+  debtorAddress?: string
   securedParty: string
+  securedPartyAddress?: string
+  collateral?: string
   state: string
   lienAmount?: number
+  amount?: number // Alias for lienAmount
   status: 'active' | 'terminated' | 'lapsed'
   filingType: 'UCC-1' | 'UCC-3'
+  lapseDate?: string
+  source?: string
+  fileNumber?: string // Alias for externalId
 }
 
 export interface GrowthSignal {
@@ -19,10 +27,13 @@ export interface GrowthSignal {
   type: SignalType
   description: string
   detectedDate: string
+  source?: string
   sourceUrl?: string
   score: number
   confidence: number
+  impact?: string
   mlConfidence?: number // ML model confidence in signal validity (0-100)
+  metadata?: Record<string, any>
 }
 
 export interface HealthScore {
