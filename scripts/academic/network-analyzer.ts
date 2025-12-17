@@ -207,11 +207,64 @@ export class NetworkAnalyzer {
         topics: topTopics,
         size: paperIds.length,
         cohesion,
-        growth: 0 // TODO: Calculate from paper dates
+        growth: this.calculateCommunityGrowth(paperIds, papers)
       })
     })
 
     return communities.sort((a, b) => b.size - a.size)
+  }
+
+  /**
+   * Calculate community growth (papers per year trend)
+   */
+  private calculateCommunityGrowth(paperIds: string[], papers: Map<string, Paper>): number {
+    const papersByYear = new Map<number, number>()
+    let minYear = Infinity
+    let maxYear = -Infinity
+
+    // Count papers per year
+    paperIds.forEach(id => {
+      const paper = papers.get(id)
+      if (paper) {
+        const year = parseInt(paper.publicationDate)
+        if (!isNaN(year)) {
+          papersByYear.set(year, (papersByYear.get(year) || 0) + 1)
+          if (year < minYear) minYear = year
+          if (year > maxYear) maxYear = year
+        }
+      }
+    })
+
+    // Need at least 2 years to calculate a trend
+    if (minYear === Infinity || maxYear === -Infinity || minYear === maxYear) {
+      return 0
+    }
+
+    // Calculate linear regression slope (growth trend)
+    let sumX = 0
+    let sumY = 0
+    let sumXY = 0
+    let sumX2 = 0
+    let n = 0
+
+    // Fill in zeros for missing years between min and max
+    for (let year = minYear; year <= maxYear; year++) {
+      const count = papersByYear.get(year) || 0
+
+      sumX += year
+      sumY += count
+      sumXY += year * count
+      sumX2 += year * year
+      n++
+    }
+
+    // Slope = (nΣxy - ΣxΣy) / (nΣx² - (Σx)²)
+    const numerator = n * sumXY - sumX * sumY
+    const denominator = n * sumX2 - sumX * sumX
+
+    if (denominator === 0) return 0
+
+    return numerator / denominator
   }
 
   /**
