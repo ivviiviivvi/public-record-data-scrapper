@@ -221,12 +221,13 @@ export async function fetchDashboardStats() {
     const queries = createQueries(db)
 
     const stats = await queries.getProspectStats()
+    const newSignalsCount = await queries.getNewSignalsCountForToday()
 
     return {
       totalProspects: stats.total,
       highValueProspects: stats.total > 0 ? Math.round(stats.total * 0.3) : 0, // Estimate
-      avgPriorityScore: Math.round(stats.avgScore),
-      newSignalsToday: 0, // TODO: Calculate from growth_signals
+      avgPriorityScore: Math.round(stats.avg_priority_score),
+      newSignalsToday: newSignalsCount,
       portfolioAtRisk: 0, // TODO: Calculate from portfolio
       avgHealthGrade: 'B' as const // TODO: Calculate from health scores
     }
