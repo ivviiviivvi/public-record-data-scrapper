@@ -74,6 +74,7 @@ npm run dev
 The platform includes a **standalone terminal-based scraper** for individual use:
 
 ### CLI Features
+
 - 🔍 **UCC Filing Scraper**: Extract filings from CA, TX, FL state portals
 - 📊 **Data Enrichment**: Fetch data from SEC, OSHA, USPTO, Census, SAM.gov
 - 📝 **Multiple Formats**: Export as JSON or CSV
@@ -139,6 +140,7 @@ terraform apply
 ## Features
 
 ### Core Capabilities
+
 - **Prospect Dashboard**: Displays prioritized list of UCC default prospects with scores, growth signals, and health grades
 - **Data Enrichment Pipeline**: Multi-tier data acquisition from free and commercial sources (see [ENRICHMENT_PIPELINE.md](./ENRICHMENT_PIPELINE.md))
 - **Health Scoring**: Real-time business health monitoring with sentiment analysis and violation tracking
@@ -205,6 +207,7 @@ npm run test:coverage
 ```
 
 **Test Statistics:**
+
 - Total Tests: 526 (100% passing)
 - Test Files: 15
 - Test Suites: 60+
@@ -228,6 +231,7 @@ npm run preview
 The platform includes a comprehensive multi-agent autonomous system with **60+ specialized agents**:
 
 **Analysis Agents (5):**
+
 - **Data Analyzer Agent** - Monitors data quality and freshness
 - **Optimizer Agent** - Suggests performance improvements
 - **Security Agent** - Scans for vulnerabilities and security issues
@@ -235,6 +239,7 @@ The platform includes a comprehensive multi-agent autonomous system with **60+ s
 - **Competitor Agent** - Analyzes competitive threats and opportunities
 
 **Data Collection Agents (55+):**
+
 - **State Agents (50)** - One agent per US state + DC for UCC filing collection
   - State-specific portal scraping and API integration
   - Automatic rate limiting and business hours compliance
@@ -248,6 +253,7 @@ The platform includes a comprehensive multi-agent autonomous system with **60+ s
   - Webhook receivers for real-time updates
 
 **Agent Orchestration:**
+
 - **AgentOrchestrator** - Coordinates multi-agent workflows across all 60+ agents
 - **Factory Patterns** - Dynamic agent creation and management
 - **Parallel Execution** - Run analysis across all states simultaneously
@@ -358,6 +364,7 @@ Comprehensive test suite with **526 tests** covering:
 - **Edge Cases** - Boundary conditions, error recovery, concurrent operations, state management
 
 **Test Coverage**:
+
 - Test Files: 15
 - Test Suites: 60+
 - Total Tests: 526
@@ -370,6 +377,7 @@ See [TESTING.md](./docs/TESTING.md) for detailed testing documentation.
 ## 📚 Documentation
 
 ### User Documentation
+
 - [README](README.md) - This file
 - [Quick Start Guide](docs/QUICKSTART.md) - Get started quickly
 - [Contributing Guidelines](CONTRIBUTING.md)
@@ -378,6 +386,7 @@ See [TESTING.md](./docs/TESTING.md) for detailed testing documentation.
 - [TODO List](docs/TODO.md) - Current tasks and priorities
 
 ### Technical Documentation
+
 - [Data Pipeline Guide](docs/technical/DATA_PIPELINE.md)
 - [Deployment Guide](docs/technical/DEPLOYMENT.md)
 - [Infrastructure Setup](terraform/README.md) - Terraform configuration and deployment
@@ -387,14 +396,19 @@ See [TESTING.md](./docs/TESTING.md) for detailed testing documentation.
 - [Product Requirements](docs/PRD.md)
 - [Testing Guide](docs/TESTING.md)
 - [Agentic Forces](docs/AGENTIC_FORCES.md) - Complete agent system documentation
+- [Security Implementation](docs/SECURITY_IMPLEMENTATION.md) - **NEW**: Comprehensive security guide
+- [Comprehensive Critique](docs/COMPREHENSIVE_CRITIQUE.md) - **NEW**: 9-dimension platform analysis
+- [Evolution Roadmap](docs/EVOLUTION_ROADMAP.md) - **NEW**: Strategic development roadmap
 
 ### Project Reports
+
 - [Branch Cleanup Plan](docs/reports/BRANCH_CLEANUP_PLAN.md)
 - [Branch Review Summary](docs/reports/BRANCH_REVIEW_SUMMARY.md)
 - [Mega Consolidation Summary](docs/reports/MEGA_CONSOLIDATION_SUMMARY.md)
 - [Final Cleanup Report](docs/reports/FINAL_CLEANUP_REPORT.md)
 
 ### Core Documentation
+
 - **Product Requirements**: See [PRD.md](./PRD.md) for detailed feature specifications
 - **Logic Analysis**: See [LOGIC_ANALYSIS.md](./LOGIC_ANALYSIS.md) for implementation details
 - **Security**: See [SECURITY.md](./SECURITY.md) for security policies
@@ -403,21 +417,26 @@ See [TESTING.md](./docs/TESTING.md) for detailed testing documentation.
 - **Implementation Summary**: See [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) for implementation details
 
 ### Repository Management
+
 - **Branch Resolution**: See [BRANCH_RESOLUTION.md](./BRANCH_RESOLUTION.md) for branch cleanup strategy
 - **Maintenance Guide**: See [MAINTENANCE_GUIDE.md](./MAINTENANCE_GUIDE.md) for post-merge maintenance actions
 - **PR Comments Resolution**: See [PR_COMMENTS_RESOLUTION.md](./PR_COMMENTS_RESOLUTION.md) for tracking open-ended comments and action items
 
 ### Custom Agents
+
 - **Dynatrace Expert**: See [.github/agents/dynatrace-expert.md](.github/agents/dynatrace-expert.md) - Master observability specialist with complete DQL knowledge
 - **Custom Agents Guide**: See [.github/agents/README.md](.github/agents/README.md) - How to use and create custom agents
 
 ## 🔒 Security
 
-- **Zero Vulnerabilities** - All dependencies audited and updated
+- **Zero Vulnerabilities** - All dependencies audited and updated (verified `npm audit`)
 - **Type Safety** - Comprehensive TypeScript coverage
-- **Input Validation** - Zod schema validation
-- **Security Agent** - Automated vulnerability scanning
+- **Input Sanitization** - XSS prevention with DOMPurify (38 security tests)
+- **Input Validation** - Zod schema validation for all data types
+- **Security Agent** - Automated vulnerability scanning via agentic system
 - **Regular Audits** - Continuous security monitoring
+
+See [SECURITY_IMPLEMENTATION.md](docs/SECURITY_IMPLEMENTATION.md) for comprehensive security documentation.
 
 ## 🛠️ Development
 
