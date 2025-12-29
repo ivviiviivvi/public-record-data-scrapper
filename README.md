@@ -8,11 +8,30 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+---
+
+## 🎬 Quick Access
+
+<div align="center">
+
+### [▶️ **WATCH PRESENTATION VIDEO**](./public/videos/EXECUTIVE_VIDEO_SCRIPT.mp4)
+
+**5-minute investor pitch with audio narration**
+
+### [🚀 **TRY LIVE DEMO**](https://public-record-data-scrapper.vercel.app)
+
+**Interactive sandbox environment**
+
+---
+
+</div>
+
 **NEW: Professional Investor Video** - 5-minute presentation video with audio narration showcasing the platform for potential investors and employers. See [VIDEO_GENERATION_SUMMARY.md](./VIDEO_GENERATION_SUMMARY.md) for details.
 
 **NEW: Terminal CLI Tool** - Standalone command-line scraper for individual use without GUI. Perfect for field data collection. See [CLI_USAGE.md](./CLI_USAGE.md) for details.
 
 **NEW: Video Production Agent** - Autonomous system for generating professional MP4 videos from markdown scripts. Fully automated local-first workflow. See [scripts/video-production/README.md](./scripts/video-production/README.md) for details.
+
 ## 🎯 Overview
 
 The UCC-MCA Intelligence Platform is a sophisticated lead generation tool that analyzes Uniform Commercial Code (UCC) filings to identify businesses with active financing and predict their likelihood of needing Merchant Cash Advances. The platform combines AI-powered analysis, automated data enrichment, and intelligent scoring to help MCA providers find and prioritize the best prospects.
@@ -47,16 +66,24 @@ The UCC-MCA Intelligence Platform is a sophisticated lead generation tool that a
 
 ## Video Presentation
 
-🎥 **Watch the Platform Presentation** - A professional 5-minute video showcasing the UCC-MCA Intelligence Platform for investors and employers.
+### 🎬 **[▶️ Watch Now: 5-Minute Investor Pitch](./public/videos/EXECUTIVE_VIDEO_SCRIPT.mp4)**
 
-The video covers:
-- Business problem and market opportunity
-- Strategic solution architecture
-- Technical sophistication and reliability
-- Measurable business impact
-- Unique differentiators
+A professional presentation video with audio narration showcasing the UCC-MCA Intelligence Platform for investors and employers.
 
-**Generate your own video:**
+**Video Highlights:**
+
+- 📊 Business problem and $2B+ market opportunity
+- 🏗️ Strategic three-tier solution architecture
+- 🔒 Technical sophistication with 526 tests and zero vulnerabilities
+- 📈 Measurable business impact: -60% sales cycle, +40% lead quality
+- 💡 Unique differentiators and competitive advantages
+
+**File Details:** 4.1 MB | 5:39 duration | 1920x1080 Full HD | MP4 format
+
+---
+
+**Want to customize?** Generate your own video:
+
 ```bash
 # Install dependencies (if not already installed)
 sudo apt-get install -y ffmpeg espeak  # Linux
@@ -105,7 +132,9 @@ npm run dev
 The platform includes a **standalone terminal-based scraper** for individual use:
 
 ### CLI Features
->>>>>>> origin/main
+
+> > > > > > > origin/main
+
 - 🔍 **UCC Filing Scraper**: Extract filings from CA, TX, FL state portals
 - 📊 **Data Enrichment**: Fetch data from SEC, OSHA, USPTO, Census, SAM.gov
 - 📝 **Multiple Formats**: Export as JSON or CSV
@@ -136,6 +165,7 @@ See [CLI_USAGE.md](./CLI_USAGE.md) for detailed documentation.
 The platform includes an **autonomous video production agent** for creating professional videos:
 
 ### Video Production Features
+
 - 🎬 **Automated Pipeline**: Script → Narration → Visuals → Final MP4
 - 🎙️ **Local TTS**: Platform-specific text-to-speech (macOS `say`, Linux `espeak`/`festival`)
 - 🎨 **Visual Generation**: Automatic title cards, diagrams, and metrics displays
@@ -160,6 +190,7 @@ npm run video:generate
 ```
 
 See [scripts/video-production/README.md](./scripts/video-production/README.md) for complete documentation and [scripts/video-production/INSTALL.md](./scripts/video-production/INSTALL.md) for installation instructions.
+
 ## Infrastructure Setup
 
 The platform includes production-ready Infrastructure as Code (IaC) using Terraform for AWS deployment:
@@ -267,6 +298,7 @@ npm run test:coverage
 ```
 
 **Test Statistics:**
+
 - Total Tests: 526 (100% passing)
 - Test Files: 15
 - Test Suites: 60+
@@ -290,6 +322,7 @@ npm run preview
 The platform includes a comprehensive multi-agent autonomous system with **60+ specialized agents**:
 
 **Analysis Agents (5):**
+
 - **Data Analyzer Agent** - Monitors data quality and freshness
 - **Optimizer Agent** - Suggests performance improvements
 - **Security Agent** - Scans for vulnerabilities and security issues
@@ -297,6 +330,7 @@ The platform includes a comprehensive multi-agent autonomous system with **60+ s
 - **Competitor Agent** - Analyzes competitive threats and opportunities
 
 **Data Collection Agents (55+):**
+
 - **State Agents (50)** - One agent per US state + DC for UCC filing collection
   - State-specific portal scraping and API integration
   - Automatic rate limiting and business hours compliance
@@ -310,6 +344,7 @@ The platform includes a comprehensive multi-agent autonomous system with **60+ s
   - Webhook receivers for real-time updates
 
 **Agent Orchestration:**
+
 - **AgentOrchestrator** - Coordinates multi-agent workflows across all 60+ agents
 - **Factory Patterns** - Dynamic agent creation and management
 - **Parallel Execution** - Run analysis across all states simultaneously
@@ -420,6 +455,7 @@ Comprehensive test suite with **526 tests** covering:
 - **Edge Cases** - Boundary conditions, error recovery, concurrent operations, state management
 
 **Test Coverage**:
+
 - Test Files: 15
 - Test Suites: 60+
 - Total Tests: 526
@@ -432,6 +468,7 @@ See [TESTING.md](./docs/TESTING.md) for detailed testing documentation.
 ## 📚 Documentation
 
 ### User Documentation
+
 - [README](README.md) - This file
 - [Quick Start Guide](docs/QUICKSTART.md) - Get started quickly
 - [Contributing Guidelines](CONTRIBUTING.md)
@@ -440,6 +477,7 @@ See [TESTING.md](./docs/TESTING.md) for detailed testing documentation.
 - [TODO List](docs/TODO.md) - Current tasks and priorities
 
 ### Technical Documentation
+
 - [Data Pipeline Guide](docs/technical/DATA_PIPELINE.md)
 - [Deployment Guide](docs/technical/DEPLOYMENT.md)
 - [Infrastructure Setup](terraform/README.md) - Terraform configuration and deployment
@@ -455,14 +493,15 @@ See [TESTING.md](./docs/TESTING.md) for detailed testing documentation.
 
 ### Project Reports
 
-
 ### Project Reports
+
 - [Branch Cleanup Plan](docs/reports/BRANCH_CLEANUP_PLAN.md)
 - [Branch Review Summary](docs/reports/BRANCH_REVIEW_SUMMARY.md)
 - [Mega Consolidation Summary](docs/reports/MEGA_CONSOLIDATION_SUMMARY.md)
 - [Final Cleanup Report](docs/reports/FINAL_CLEANUP_REPORT.md)
 
 ### Core Documentation
+
 - **Product Requirements**: See [PRD.md](./PRD.md) for detailed feature specifications
 - **Logic Analysis**: See [LOGIC_ANALYSIS.md](./LOGIC_ANALYSIS.md) for implementation details
 - **Security**: See [SECURITY.md](./SECURITY.md) for security policies
@@ -496,6 +535,7 @@ See [SECURITY_IMPLEMENTATION.md](docs/SECURITY_IMPLEMENTATION.md) for comprehens
 - **Custom Agents Guide**: See [.github/agents/README.md](.github/agents/README.md) - How to use and create custom agents
 
 ### Portfolio & Hiring
+
 - **Executive Hiring Video System**: See [docs/video-portfolio/](docs/video-portfolio/) - Complete system for creating a 3-5 minute portfolio video for non-technical executives
   - Transform this repository into a compelling hiring pitch
   - Includes script, visuals, production guide, and translation glossary
