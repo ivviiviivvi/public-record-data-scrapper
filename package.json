@@ -165,7 +165,7 @@
     "@vitejs/plugin-react-swc": "^4.2.1",
     "@vitest/coverage-v8": "^4.0.8",
     "@vitest/ui": "^4.0.8",
-    "axios": "^1.16.0",
+    "axios": "^1.19.0",
     "cheerio": "^1.1.2",
     "concurrently": "^10.0.3",
     "eslint": "^9.28.0",
