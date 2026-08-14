@@ -4,14 +4,92 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests: 3,399](https://img.shields.io/badge/tests-3%2C399%20passing-brightgreen)](https://github.com/organvm-iii-ergon/public-record-data-scrapper)
-[![Deploy: Vercel](https://img.shields.io/badge/deploy-Vercel-black?logo=vercel)](https://public-record-data-scrapper.vercel.app)
+[![CI Gate](https://github.com/organvm-iii-ergon/public-record-data-scrapper/actions/workflows/ci-gate.yml/badge.svg?branch=main)](https://github.com/organvm-iii-ergon/public-record-data-scrapper/actions/workflows/ci-gate.yml)
+[![Public surface](https://img.shields.io/badge/public%20surface-GitHub%20Pages-222)](https://organvm-iii-ergon.github.io/public-record-data-scrapper/)
+
+---
+
+## Proof destination
+
+### Problem
+
+Public-record collection is not one uniform scrape: each jurisdiction exposes a different portal,
+transport, access constraints, and failure modes. A useful implementation must make those differences
+inspectable without implying data completeness or nationwide deployment.
+
+### Status
+
+The repository contains four implemented state collectors: California, Texas, Florida, and New
+York. They sit inside a broader multi-state architecture; other state paths remain roadmap work.
+California requires `CA_SOS_API_KEY`; Texas requires `TX_SOSDIRECT_API_KEY` plus
+`TX_SOSDIRECT_ACCOUNT_ID`; and Florida requires vendor key/secret credentials plus an active
+vendor contract. New York requires configured debtor search names in `NY_UCC_DEBTOR_SEEDS`, not
+credentials. Each collector fails closed when its own access or seed requirement is absent.
+
+### Architecture
+
+The React client, Express API, BullMQ workers, PostgreSQL store, and per-state collector adapters are
+separate layers. Collector outputs can pass through public-data enrichment and an inspectable
+rules-based score before the API, CLI, or dashboard presents them. Optional vendors remain
+key-gated rather than returning synthetic substitutes.
+
+### Decisions and tradeoffs
+
+- Per-state adapters preserve portal-specific behavior instead of hiding it behind a false uniform
+  interface.
+- Credentialed and optional sources fail closed, trading breadth for explicit provenance.
+- A rules-based score remains authoritative; the optional experimental model is not treated as
+  validated outcome prediction.
+- Infrastructure manifests document deployment shapes, but source presence is not deployment
+  evidence.
+
+### Verification
+
+- [CI Gate](https://github.com/organvm-iii-ergon/public-record-data-scrapper/actions/workflows/ci-gate.yml)
+  is the repository-owned verification workflow.
+- The [successful exact-base workflow run](https://github.com/organvm-iii-ergon/public-record-data-scrapper/actions/runs/31310353594)
+  is bound to `139fa7b40d875ecfe3a8c693dedfab46671739fd`.
+- `npm test` and `npm run test:server` reproduce the client and server suites; runner output is the
+  count authority, so this page does not freeze a total that will drift.
+- Tagged release candidates use [`.github/workflows/release.yml`](.github/workflows/release.yml);
+  source or a passing test run does not by itself establish a published release.
+
+### Status and authorship disclosure
+
+**Authorship class:** Agent-directed. Architected and directed by one person through a governed,
+multi-agent production system. Automation and agent assistance are disclosed through the
+repository's commit, review, and workflow history.
+
+### Limitations
+
+- Four implemented collectors do not establish fifty-state deployment or data completeness.
+- Portal behavior, credentials, and vendor contracts can change independently of this source.
+- The repository does not establish installs, daily use, adoption, customers, revenue, rankings,
+  retention, or zero-maintenance operation.
+
+### What this proves
+
+The public source proves four inspectable collector implementations (CA, TX, FL, and NY) within a
+broader architecture, together with explicit access and verification boundaries.
+
+### Doors
+
+**[Have a problem one of these solves? — Deploy it for your shop](mailto:contact@4444j99.dev?subject=%5Bfront%20door%20%C2%B7%20deploy%5D%20%E2%80%94%20inbound) →**
+
+> Pick the depth that fits. We feed you the output, run it under your brand, build it for your exact world, or become your engine.
+
+**[Hiring someone who ships at this level? — Work with the builder](mailto:contact@4444j99.dev?subject=%5Bfront%20door%20%C2%B7%20hire%5D%20%E2%80%94%20inbound) →**
+
+> Everything here is the portfolio. If you need a senior builder who owns systems end-to-end — data, infra, AI, deploy — this is the evidence.
+
+Before relying on a collector or scoring claim, inspect the four adapters and run `npm test` plus
+`npm run test:server`.
 
 ---
 
 ## What It Does
 
-1. **Collects** UCC-1 filing data from state Secretary of State portals — 4 collectors implemented (CA API, TX bulk, FL vendor, NY portal scraper) with per-state strategies (API, bulk download, vendor feed, scrape) and fallback. FL and NY are credential-gated and fail closed when unconfigured.
+1. **Collects** UCC-1 filing data from state Secretary of State portals — 4 collectors implemented (CA API, TX bulk, FL vendor, NY portal scraper) with per-state strategies (API, bulk download, vendor feed, scrape) and fallback. CA, TX, and FL use the access gates described above; NY uses configured debtor seeds without credentials. Every collector fails closed when its requirement is absent.
 2. **Enriches** each filing with free public data (SEC EDGAR, OSHA, USPTO, Census Bureau) plus optional, key-gated sources (SAM.gov, D&B, Clearbit, ZoomInfo) that fail closed — returning a named error, never fabricated data — when no API key is configured
 3. **Scores** every prospect 0--100 on financing likelihood, assigns a health grade (A--F), and flags growth signals (hiring, permits, equipment purchases, expansion)
 4. **Delivers** results through a React web dashboard, REST API, or CLI tool
@@ -47,7 +125,7 @@
 ## Usage
 
 ```bash
-git clone https://github.com/organvm/public-record-data-scrapper.git
+git clone https://github.com/organvm-iii-ergon/public-record-data-scrapper.git
 cd public-record-data-scrapper
 npm ci
 ```
@@ -236,7 +314,7 @@ Internal workspace packages expose source entrypoints for other workspace code:
 └──────────────┘ └─────────────┘ └─────┬──────────────┘
                                        │
                     ┌──────────────────▼────────────────┐
-                    │  State SOS Collectors (4 live)      │
+                    │  State SOS Collectors (4 implemented)│
                     │  CA · TX · FL · NY                  │
                     │  + SEC · OSHA · USPTO · Census      │
                     │  + SAM.gov · D&B · Clearbit · Zoom  │
@@ -318,7 +396,7 @@ Full endpoint list: [server/openapi.yaml](server/openapi.yaml)
 
 ## Key Features
 
-- **Multi-state UCC collection** -- 4 implemented collectors (CA API, TX bulk, FL vendor, NY portal scraper) with per-state fallback strategies (API, bulk download, vendor feed, scrape); FL and NY are credential-gated and fail closed when unconfigured. 47 states remain on the roadmap.
+- **Multi-state UCC collection** -- 4 implemented collectors (CA API, TX bulk, FL vendor, NY portal scraper) with per-state fallback strategies (API, bulk download, vendor feed, scrape); FL and NY are credential-gated and fail closed when unconfigured. Additional states remain roadmap work.
 - **Transparent rules-based lead scoring** -- priority score (0--100) from a weighted, inspectable formula, health grade, growth signal detection, revenue estimation. An **optional, experimental ML model** (logistic regression) can be attached per request; it is opt-in, low-confidence, and trained on synthetic seed data pending validation against real outcomes — the rules-based score stays authoritative.
 - **Compliance built in** -- CA SB 1235 and NY CFDL disclosure calculators, TCPA consent tracking, suppression list management, immutable audit trail
 - **Full broker workflow** -- prospect dashboard, deal pipeline (Kanban), contact CRM, unified communications inbox (email/SMS/voice), bank statement underwriting (Plaid)
@@ -328,23 +406,19 @@ Full endpoint list: [server/openapi.yaml](server/openapi.yaml)
 
 ## Testing
 
-3,399 passing tests across 168 files (plus 6 skipped server tests), zero failures on a clean run (verified, branch rebased onto `main`). `npm test` runs two Vitest projects; the server suite is a third:
+Use the repository-owned runners below. Their output is the current count and result authority;
+the README intentionally does not hard-code a total that can contradict a later exact tree.
 
 ```bash
-npm test                       # Client suites:  2,029 tests / 88 files (apps/web jsdom + root)
-npm run test:server            # Server (node):   1,370 tests / 80 files (+6 skipped)
+npm test                       # Client Vitest projects
+npm run test:server            # Server Vitest project
 npm run test:coverage          # V8 coverage report (web)
-npm run test:e2e               # Playwright end-to-end (3 specs, run separately)
+npm run test:e2e               # Playwright end-to-end, run separately
 ```
 
-| Suite                           | Runner         | Tests     | Files   |
-| ------------------------------- | -------------- | --------- | ------- |
-| Web — `apps/web` (`npm test`)   | Vitest + jsdom | 2,005     | 83      |
-| Web — root project (`npm test`) | Vitest         | 24        | 5       |
-| Server (`test:server`)          | Vitest + node  | 1,370     | 80      |
-| **Total**                       |                | **3,399** | **168** |
-
-Counts are reproducible from the test runners above. The server suite carries one pre-existing, order-dependent flaky test (`outreach` briefing "cache warm") that passes in isolation and on re-run; it is unrelated to this branch. The web run's earlier config-glob bug + jsdom localStorage regression were fixed here.
+The [CI Gate](https://github.com/organvm-iii-ergon/public-record-data-scrapper/actions/workflows/ci-gate.yml)
+runs the governed repository checks. Preserve the workflow run URL and exact head when using its
+result as evidence.
 
 ---
 
@@ -400,14 +474,14 @@ Provisions: VPC with multi-AZ subnets, RDS PostgreSQL (encrypted, Multi-AZ), Ela
 1. Fork and create a feature branch: `git checkout -b feature/your-feature`
 2. Install: `npm install --legacy-peer-deps`
 3. Develop: `npm run dev:full`
-4. Test: `npm test` and `npm run test:server` (all tests must pass — 3,321 across both suites)
+4. Test: `npm test` and `npm run test:server` (both runners must pass)
 5. Lint: `npm run lint`
 6. Commit: `git commit -m "feat: description"` ([Conventional Commits](https://www.conventionalcommits.org/))
 7. Open a Pull Request
 
 ### Priority Contribution Areas
 
-- **State agent implementations** -- live implementations needed for NY, IL, OH, GA, PA
+- **State agent implementations** -- additional implementations needed beyond CA, TX, FL, and NY
 - **Enrichment sources** -- state business registries, county assessor records
 - **Compliance expansion** -- additional state disclosure requirements
 - **Performance** -- query optimization for very large prospect datasets (tens of thousands of rows and beyond)
