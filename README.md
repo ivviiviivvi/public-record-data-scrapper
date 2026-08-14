@@ -14,7 +14,7 @@
 ### Problem
 
 Public-record collection is not one uniform scrape: each jurisdiction exposes a different portal,
-transport, access constraint, and failure mode. A useful implementation must make those differences
+transport, access constraints, and failure modes. A useful implementation must make those differences
 inspectable without implying data completeness or nationwide deployment.
 
 ### Status
