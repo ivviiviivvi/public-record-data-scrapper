@@ -21,7 +21,10 @@ inspectable without implying data completeness or nationwide deployment.
 
 The repository contains four implemented state collectors: California, Texas, Florida, and New
 York. They sit inside a broader multi-state architecture; other state paths remain roadmap work.
-Florida and New York are credential-gated and fail closed when their required access is absent.
+California requires `CA_SOS_API_KEY`; Texas requires `TX_SOSDIRECT_API_KEY` plus
+`TX_SOSDIRECT_ACCOUNT_ID`; and Florida requires vendor key/secret credentials plus an active
+vendor contract. New York requires configured debtor search names in `NY_UCC_DEBTOR_SEEDS`, not
+credentials. Each collector fails closed when its own access or seed requirement is absent.
 
 ### Architecture
 
@@ -77,7 +80,7 @@ or scoring claim.
 
 ## What It Does
 
-1. **Collects** UCC-1 filing data from state Secretary of State portals — 4 collectors implemented (CA API, TX bulk, FL vendor, NY portal scraper) with per-state strategies (API, bulk download, vendor feed, scrape) and fallback. FL and NY are credential-gated and fail closed when unconfigured.
+1. **Collects** UCC-1 filing data from state Secretary of State portals — 4 collectors implemented (CA API, TX bulk, FL vendor, NY portal scraper) with per-state strategies (API, bulk download, vendor feed, scrape) and fallback. CA, TX, and FL use the access gates described above; NY uses configured debtor seeds without credentials. Every collector fails closed when its requirement is absent.
 2. **Enriches** each filing with free public data (SEC EDGAR, OSHA, USPTO, Census Bureau) plus optional, key-gated sources (SAM.gov, D&B, Clearbit, ZoomInfo) that fail closed — returning a named error, never fabricated data — when no API key is configured
 3. **Scores** every prospect 0--100 on financing likelihood, assigns a health grade (A--F), and flags growth signals (hiring, permits, equipment purchases, expansion)
 4. **Delivers** results through a React web dashboard, REST API, or CLI tool
