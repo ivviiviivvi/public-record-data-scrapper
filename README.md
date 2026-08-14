@@ -56,8 +56,9 @@ key-gated rather than returning synthetic substitutes.
 
 ### Status and authorship disclosure
 
-Maintained by [@4444j99](https://github.com/4444j99) within ORGAN-III. Automation and agent
-assistance are disclosed through the repository's commit, review, and workflow history.
+**Authorship class:** Agent-directed. Architected and directed by one person through a governed,
+multi-agent production system. Automation and agent assistance are disclosed through the
+repository's commit, review, and workflow history.
 
 ### Limitations
 
@@ -71,10 +72,18 @@ assistance are disclosed through the repository's commit, review, and workflow h
 The public source proves four inspectable collector implementations (CA, TX, FL, and NY) within a
 broader architecture, together with explicit access and verification boundaries.
 
-### Next action
+### Doors
 
-Inspect the four adapters and run `npm test` plus `npm run test:server` before relying on a collector
-or scoring claim.
+**[Have a problem one of these solves? — Deploy it for your shop](mailto:contact@4444j99.dev?subject=%5Bfront%20door%20%C2%B7%20deploy%5D%20%E2%80%94%20inbound) →**
+
+> Pick the depth that fits. We feed you the output, run it under your brand, build it for your exact world, or become your engine.
+
+**[Hiring someone who ships at this level? — Work with the builder](mailto:contact@4444j99.dev?subject=%5Bfront%20door%20%C2%B7%20hire%5D%20%E2%80%94%20inbound) →**
+
+> Everything here is the portfolio. If you need a senior builder who owns systems end-to-end — data, infra, AI, deploy — this is the evidence.
+
+Before relying on a collector or scoring claim, inspect the four adapters and run `npm test` plus
+`npm run test:server`.
 
 ---
 
