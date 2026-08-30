@@ -17,7 +17,11 @@ import './index.css'
 // together mean there is no Spark backend, and the app already falls back to
 // local-storage state management via useSparkKV.
 const hasApiBase = Boolean(import.meta.env.VITE_API_BASE_URL)
-if (typeof window !== 'undefined' && !(import.meta.env.PROD && !hasApiBase)) {
+const publicDemoEnabled = Boolean(String(import.meta.env.VITE_PUBLIC_DEMO_RECEIPT_URL ?? '').trim())
+
+// Public demo mode is an explicit zero-write surface even outside production.
+// Normal production static builds also skip Spark unless an API base is present.
+if (typeof window !== 'undefined' && !publicDemoEnabled && !(import.meta.env.PROD && !hasApiBase)) {
   import('@github/spark/spark').catch((error) => {
     console.warn(
       '[main] Unable to load Spark runtime; falling back to local storage state management.',
