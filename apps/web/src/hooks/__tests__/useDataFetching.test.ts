@@ -177,17 +177,19 @@ describe('useDataFetching', () => {
       expect(callArg instanceof AbortSignal).toBe(true)
     })
 
-    it('should handle API errors', async () => {
+    it('should fall back to demo data when the live API errors', async () => {
       mockFetchProspects.mockRejectedValueOnce(new Error('Network error'))
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       const { result } = renderHook(() => useDataFetching({ useMockData: false }))
 
       await waitFor(() => {
-        expect(result.current.loadError).toBe('Network error')
+        expect(result.current.isDemoFallback).toBe(true)
       })
 
       expect(result.current.isLoading).toBe(false)
+      expect(result.current.loadError).toBe(null)
+      expect(result.current.prospects).toHaveLength(12)
 
       consoleSpy.mockRestore()
     })
@@ -210,14 +212,14 @@ describe('useDataFetching', () => {
       expect(fetchResult).toBe(true)
     })
 
-    it('should return false on fetch error', async () => {
+    it('should return false and expose demo fallback on fetch error', async () => {
       mockFetchProspects.mockRejectedValue(new Error('Error'))
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       const { result } = renderHook(() => useDataFetching({ useMockData: false }))
 
       await waitFor(() => {
-        expect(result.current.loadError).not.toBe(null)
+        expect(result.current.isDemoFallback).toBe(true)
       })
 
       let fetchResult = true
@@ -226,6 +228,7 @@ describe('useDataFetching', () => {
       })
 
       expect(fetchResult).toBe(false)
+      expect(result.current.loadError).toBe(null)
 
       consoleSpy.mockRestore()
     })
