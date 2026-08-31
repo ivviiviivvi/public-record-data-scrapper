@@ -4,6 +4,7 @@ import { IngestionJobData } from '../queues'
 import { database } from '../../database/connection'
 import { DataQualityService } from '../../services/DataQualityService'
 import { ScoringService } from '../../services/ScoringService'
+import { executionContractService } from '../../services/ExecutionContractService'
 import { listEnabledIntegrations, resolveUccProvider } from '../../config/tieredIntegrations'
 import type {
   StateCollector,
@@ -152,18 +153,55 @@ async function processIngestion(job: Job<IngestionJobData>): Promise<void> {
       error: error instanceof Error ? error.message : 'Unknown error'
     })
 
+    const recovery =
+      error instanceof NonRetryableIngestionError
+        ? {
+            action: 'none' as const,
+            nextStrategy: null,
+            delayMs: 0,
+            backoffUntil: null,
+            reason: 'Collector is not configured or ready; activation review is required.'
+          }
+        : evaluateIngestionRecoveryAction({
+            state,
+            currentStrategy,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          })
+
+    const failureEventId = [
+      'ucc-ingestion',
+      state,
+      job.id?.toString() ?? 'unknown-job',
+      currentStrategy ?? 'unconfigured',
+      String(job.attemptsMade ?? 0)
+    ].join(':')
+    try {
+      await executionContractService.recordCollectorException({
+        state,
+        strategy: currentStrategy,
+        jobId: job.id?.toString() ?? 'unknown-job',
+        eventId: failureEventId,
+        recoveryAction: recovery.action,
+        evidenceRef: `audit://ucc/${state}/${failureEventId}`,
+        failureCode:
+          error instanceof NonRetryableIngestionError
+            ? 'ucc.collector.not_ready'
+            : 'ucc.collector.exception'
+      })
+    } catch (auditError) {
+      // Evidence failure must not replace the original collector exception.
+      console.error(
+        '[Ingestion Worker] Failed to persist execution receipt:',
+        auditError instanceof Error ? auditError.message : 'Unknown audit error'
+      )
+    }
+
     if (error instanceof NonRetryableIngestionError) {
       console.error(
         `[Ingestion Worker] Skipping self-heal for ${state} because the failure is not retryable`
       )
       throw error
     }
-
-    const recovery = evaluateIngestionRecoveryAction({
-      state,
-      currentStrategy,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
 
     if ((recovery.action === 'fallback' || recovery.action === 'retry') && recovery.nextStrategy) {
       const ingestionQueue = getIngestionQueue()
