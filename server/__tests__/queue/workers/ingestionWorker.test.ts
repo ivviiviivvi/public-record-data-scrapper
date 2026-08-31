@@ -56,6 +56,7 @@ const mocks = vi.hoisted(() => {
     mockRecordIngestionFailed: vi.fn(),
     mockRecordIngestionQueued: vi.fn(),
     mockRecordIngestionFallbackEscalated: vi.fn(),
+    mockRecordCollectorException: vi.fn().mockResolvedValue({}),
     mockResolveUccProvider: vi.fn(),
     mockListEnabledIntegrations: vi.fn(),
     mockCreateCAApiCollector: vi.fn(),
@@ -105,6 +106,12 @@ vi.mock('../../../queue/queues', () => ({
   recordIngestionQueued: mocks.mockRecordIngestionQueued,
   recordIngestionFallbackEscalated: mocks.mockRecordIngestionFallbackEscalated,
   resolveStateIngestionStrategyChain: mocks.mockResolveStateIngestionStrategyChain
+}))
+
+vi.mock('../../../services/ExecutionContractService', () => ({
+  executionContractService: {
+    recordCollectorException: mocks.mockRecordCollectorException
+  }
 }))
 
 vi.mock('../../../../apps/web/src/lib/collectors/state-collectors/CAApiCollector', () => ({
@@ -172,6 +179,7 @@ describeConditional('Ingestion Worker', () => {
     mocks.mockRecordIngestionFailed.mockReset()
     mocks.mockRecordIngestionQueued.mockReset()
     mocks.mockRecordIngestionFallbackEscalated.mockReset()
+    mocks.mockRecordCollectorException.mockReset().mockResolvedValue({})
 
     mocks.mockCreateCAApiCollector.mockReset().mockReturnValue(mocks.mockCACollector)
     mocks.mockCreateTXBulkCollector.mockReset().mockReturnValue(mocks.mockTXCollector)
@@ -325,6 +333,15 @@ describeConditional('Ingestion Worker', () => {
         })
       )
       expect(mocks.mockEvaluateIngestionRecoveryAction).not.toHaveBeenCalled()
+      expect(mocks.mockRecordCollectorException).toHaveBeenCalledWith(
+        expect.objectContaining({
+          state: 'CA',
+          strategy: 'api',
+          jobId: 'job-2',
+          recoveryAction: 'none',
+          failureCode: 'ucc.collector.not_ready'
+        })
+      )
       expect(mocks.mockQueueAdd).not.toHaveBeenCalled()
       expect(mocks.mockRecordIngestionFallbackEscalated).not.toHaveBeenCalled()
       expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -353,6 +370,16 @@ describeConditional('Ingestion Worker', () => {
         currentStrategy: 'api',
         error: 'Portal timeout'
       })
+      expect(mocks.mockRecordCollectorException).toHaveBeenCalledWith(
+        expect.objectContaining({
+          state: 'CA',
+          strategy: 'api',
+          jobId: 'job-3',
+          eventId: 'ucc-ingestion:CA:job-3:api:0',
+          recoveryAction: 'retry',
+          failureCode: 'ucc.collector.exception'
+        })
+      )
       expect(mocks.mockQueueAdd).toHaveBeenCalledWith(
         expect.stringContaining('ingest-CA-api-'),
         expect.objectContaining({
@@ -425,6 +452,15 @@ describeConditional('Ingestion Worker', () => {
       )
       expect(mocks.mockNYCollector.collectNewFilings).not.toHaveBeenCalled()
       expect(mocks.mockEvaluateIngestionRecoveryAction).not.toHaveBeenCalled()
+      expect(mocks.mockRecordCollectorException).toHaveBeenCalledWith(
+        expect.objectContaining({
+          state: 'NY',
+          strategy: 'scrape',
+          jobId: 'job-ny-2',
+          recoveryAction: 'none',
+          failureCode: 'ucc.collector.not_ready'
+        })
+      )
       expect(mocks.mockQueueAdd).not.toHaveBeenCalled()
     })
 
