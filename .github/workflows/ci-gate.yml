@@ -60,9 +60,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Type check (non-blocking — see #236)
+      - name: "Type check (non-blocking — see #236)"
         continue-on-error: true
-        run: npx tsc --noEmit || echo "::warning::TypeScript reported errors (non-blocking; tracked in #236)"
+        run: |
+          npx tsc --noEmit || echo "::warning::TypeScript reported errors (non-blocking; tracked in #236)"
 
       - name: Server tests (correctness only — coverage gate stays informational)
         run: npx vitest run --config vitest.config.server.ts --coverage.enabled=false
